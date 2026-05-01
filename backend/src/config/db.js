@@ -7,6 +7,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'freelance_platform',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
+  ssl: process.env.NODE_ENV === 'production' || process.env.DB_HOST.includes('supabase.co') 
+    ? { rejectUnauthorized: false } 
+    : false
 });
 
 pool.on('connect', () => {

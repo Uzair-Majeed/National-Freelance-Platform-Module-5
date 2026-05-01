@@ -1,27 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClipboardList, Filter, Calendar, User, Search, Download } from 'lucide-react';
+import { activityApi } from '../api';
 
 const WorkspaceActivity = () => {
-  const activities = [
-    { id: '01', type: 'MEMBER ADDED', desc: 'New member Priya Nair was added to the workspace with role UX Researcher.', actor: 'James Dawson', role: 'Project Owner', time: '14 Jul 2025', timeDetail: '09:14 AM' },
-    { id: '02', type: 'TASK CREATED', desc: 'Task "Design Homepage Wireframes" was created and assigned to Sarah Mitchell. Priority: High.', actor: 'Marcus Reid', role: 'Project Manager', time: '14 Jul 2025', timeDetail: '10:02 AM' },
-    { id: '03', type: 'STATUS UPDATED', desc: 'Task "API Integration — Auth Module" status changed from In Progress to Done.', actor: 'James Carter', role: 'Frontend Dev', time: '14 Jul 2025', timeDetail: '11:37 AM' },
-    { id: '04', type: 'FILE UPLOADED', desc: 'File "brand_assets_v2.zip" (4.2 MB) uploaded to project Brand Redesign Q3.', actor: 'Sarah Mitchell', role: 'UI Designer', time: '13 Jul 2025', timeDetail: '02:18 PM' },
-    { id: '05', type: 'ROLE CHANGED', desc: 'Member Tom Nguyen role updated from Viewer to Contributor by Project Owner.', actor: 'James Dawson', role: 'Project Owner', time: '13 Jul 2025', timeDetail: '03:45 PM' },
-    { id: '06', type: 'COMMENT ADDED', desc: 'Comment posted on task "User Research — Interview Script": "Ready for review, please check section 3..."', actor: 'Priya Nair', role: 'UX Researcher', time: '12 Jul 2025', timeDetail: '04:55 PM' },
-    { id: '07', type: 'TASK DELETED', desc: 'Task "Legacy CMS Migration — Phase 1" was permanently deleted from project board.', actor: 'Marcus Reid', role: 'Project Manager', time: '11 Jul 2025', timeDetail: '10:30 AM' },
-    { id: '08', type: 'SETTINGS UPDATED', desc: 'Project "Brand Redesign Q3" settings updated — deadline extended to 30 Aug 2025.', actor: 'James Dawson', role: 'Project Owner', time: '10 Jul 2025', timeDetail: '08:55 AM' }
-  ];
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // In a real app, this would come from context or URL
+  const WORKSPACE_ID = 'your-actual-workspace-id'; 
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setLoading(true);
+        // For demo, we'll fetch for the first workspace we find
+        const response = await fetch('http://localhost:5000/api/workspaces/project/123e4567-e89b-12d3-a456-426614174000');
+        const wsData = await response.json();
+        
+        if (wsData.success && wsData.data.length > 0) {
+          const actData = await activityApi.getByWorkspace(wsData.data[0].workspace_id);
+          if (actData.success) {
+            setActivities(actData.data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching activities:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
 
   const getTypeStyles = (type) => {
     switch (type) {
-      case 'MEMBER ADDED': return 'bg-green-50 border-green-200 text-green-700';
-      case 'TASK CREATED': return 'bg-blue-50 border-blue-200 text-blue-700';
-      case 'STATUS UPDATED': return 'bg-indigo-50 border-indigo-200 text-indigo-700';
-      case 'FILE UPLOADED': return 'bg-purple-50 border-purple-200 text-purple-700';
-      case 'ROLE CHANGED': return 'bg-yellow-50 border-yellow-200 text-yellow-700';
+      case 'MEMBER_ADDED': return 'bg-green-50 border-green-200 text-green-700';
+      case 'TASK_CREATED': return 'bg-blue-50 border-blue-200 text-blue-700';
+      case 'TASK_COMPLETED': return 'bg-indigo-50 border-indigo-200 text-indigo-700';
+      case 'FILE_UPLOADED': return 'bg-purple-50 border-purple-200 text-purple-700';
       default: return 'bg-gray-50 border-gray-200 text-gray-700';
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const handleExport = () => {
+    alert('Generating CSV export... Your download will start shortly.');
+    // In a real app, we would generate a Blob and trigger download
   };
 
   return (
@@ -34,7 +66,10 @@ const WorkspaceActivity = () => {
           </h2>
           <p className="text-sm text-gray-500 mt-1">Full audit trail of all workspace actions across members and tasks.</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm transition-all text-primary">
+        <button 
+          onClick={handleExport}
+          className="flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white rounded-lg text-sm font-bold hover:bg-gray-50 shadow-sm transition-all text-primary"
+        >
           <Download size={16} /> Export CSV
         </button>
       </div>
@@ -127,30 +162,36 @@ const WorkspaceActivity = () => {
               </tr>
             </thead>
             <tbody>
-              {activities.map((act) => (
-                <tr key={act.id} className="border-b border-border hover:bg-gray-50/30 transition-colors">
-                  <td className="p-4 text-center font-mono text-xs text-gray-400">{act.id}</td>
+              {activities.length > 0 ? activities.map((act, index) => (
+                <tr key={act.log_id} className="border-b border-border hover:bg-gray-50/30 transition-colors">
+                  <td className="p-4 text-center font-mono text-xs text-gray-400">{index + 1}</td>
                   <td className="p-4">
-                    <span className={`text-[9px] font-extrabold tracking-widest px-2.5 py-1 border rounded-lg shadow-sm select-none ${getTypeStyles(act.type)}`}>
-                      {act.type}
+                    <span className={`text-[9px] font-extrabold tracking-widest px-2.5 py-1 border rounded-lg shadow-sm select-none ${getTypeStyles(act.action_type)}`}>
+                      {act.action_type.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-primary font-medium leading-relaxed">{act.desc}</td>
+                  <td className="p-4 text-sm text-primary font-medium leading-relaxed">
+                    {act.entity_type} {act.action_type.toLowerCase().replace('_', ' ')}: {act.new_value?.detail || 'No details available'}
+                  </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2.5">
-                      <img src={`https://ui-avatars.com/api/?name=${act.actor}&background=random`} alt={act.actor} className="w-7 h-7 rounded-full shadow-sm border border-white" />
+                      <img src={`https://ui-avatars.com/api/?name=${act.actor_user_id}&background=random`} alt="User" className="w-7 h-7 rounded-full shadow-sm border border-white" />
                       <div>
-                        <p className="text-xs font-bold text-primary">{act.actor}</p>
-                        <p className="text-[9px] font-semibold text-gray-400 uppercase mt-0.5">{act.role}</p>
+                        <p className="text-xs font-bold text-primary">User {act.actor_user_id.slice(0,8)}</p>
+                        <p className="text-[9px] font-semibold text-gray-400 uppercase mt-0.5">Contributor</p>
                       </div>
                     </div>
                   </td>
                   <td className="p-4">
-                    <p className="text-xs font-bold text-primary">{act.time}</p>
-                    <p className="text-[10px] font-medium text-gray-400 mt-0.5">{act.timeDetail}</p>
+                    <p className="text-xs font-bold text-primary">{new Date(act.created_at).toLocaleDateString()}</p>
+                    <p className="text-[10px] font-medium text-gray-400 mt-0.5">{new Date(act.created_at).toLocaleTimeString()}</p>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="5" className="p-10 text-center text-gray-400">No activity logs found in database.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

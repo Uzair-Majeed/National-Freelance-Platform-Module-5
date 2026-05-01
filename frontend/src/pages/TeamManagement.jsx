@@ -1,16 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Search, Filter, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import InviteModal from '../components/InviteModal';
+import { workspaceApi } from '../api';
 
 const TeamManagement = () => {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const members = [
-    { name: 'Alex Rivera', role: 'PROJECT OWNER', email: 'alex@company.com', status: 'Active', joined: 'Jan 12, 2024' },
-    { name: 'Sarah Chen', role: 'Project Manager', email: 'sarah@company.com', status: 'Active', joined: 'Feb 3, 2024' },
-    { name: 'Marcus Johnson', role: 'Member', email: 'marcus@company.com', status: 'Active', joined: 'Feb 15, 2024' },
-    { name: 'Elena Rostova', role: 'Member', email: 'elena@company.com', status: 'Pending', joined: 'Invited Mar 1, 2024' }
-  ];
+  const [workspaceId, setWorkspaceId] = useState('');
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        setLoading(true);
+        const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
+        if (wsData.success && wsData.data.length > 0) {
+          const wsId = wsData.data[0].workspace_id;
+          setWorkspaceId(wsId);
+          const memData = await workspaceApi.getMembers(wsId);
+          if (memData.success) {
+            setMembers(memData.data);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching members:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, []);
+
+  const handleRemoveMember = async (userId) => {
+    if (!window.confirm(`Are you sure you want to remove this member?`)) return;
+    try {
+      await workspaceApi.removeMember(workspaceId, userId);
+      setMembers(members.filter(m => m.user_id !== userId));
+      alert('Member removed successfully');
+    } catch (err) {
+      alert('Failed to remove member: ' + err.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -21,7 +61,10 @@ const TeamManagement = () => {
           <p className="text-sm text-gray-500 mt-1">Manage workspace members, roles, and access permissions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-all">
+          <button 
+            onClick={() => alert('Role & Permissions management coming soon in Module 6!')}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 transition-all shadow-sm"
+          >
             <Users size={16} /> Manage Roles & Permissions
           </button>
           <button onClick={() => setIsInviteOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-opacity-90 transition-all">
@@ -37,7 +80,7 @@ const TeamManagement = () => {
             <Users size={20}/>
           </div>
           <div>
-            <p className="text-xl font-bold text-primary">4</p>
+            <p className="text-xl font-bold text-primary">{members.length}</p>
             <p className="text-xs text-gray-500 font-medium">Total Members</p>
           </div>
         </div>
@@ -46,7 +89,7 @@ const TeamManagement = () => {
             <CheckCircle2 size={20}/>
           </div>
           <div>
-            <p className="text-xl font-bold text-primary">3</p>
+            <p className="text-xl font-bold text-primary">{members.length}</p>
             <p className="text-xs text-gray-500 font-medium">Active</p>
           </div>
         </div>
@@ -55,7 +98,7 @@ const TeamManagement = () => {
             <UserPlus size={20}/>
           </div>
           <div>
-            <p className="text-xl font-bold text-primary">1</p>
+            <p className="text-xl font-bold text-primary">0</p>
             <p className="text-xs text-gray-500 font-medium">Pending Invite</p>
           </div>
         </div>
@@ -104,46 +147,60 @@ const TeamManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {members.map((member, i) => (
+              {members.length > 0 ? members.map((member, i) => (
                 <tr key={i} className="border-b border-border hover:bg-gray-50/30 transition-colors">
                   <td className="p-4 text-center">
                     <input type="checkbox" className="rounded border-gray-300 text-primary focus:ring-primary"/>
                   </td>
                   <td className="p-4">
-                    <img src={`https://ui-avatars.com/api/?name=${member.name}&background=random`} alt={member.name} className="w-10 h-10 rounded-full shadow-sm border border-white" />
+                    <img src={`https://ui-avatars.com/api/?name=${member.user_id}&background=random`} alt={member.user_id} className="w-10 h-10 rounded-full shadow-sm border border-white" />
                   </td>
                   <td className="p-4">
-                    <p className="font-bold text-sm text-primary">{member.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{member.joined}</p>
+                    <p className="font-bold text-sm text-primary">User {member.user_id.slice(0,8)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Joined {new Date(member.joined_at).toLocaleDateString()}</p>
                   </td>
-                  <td className="p-4 text-sm text-gray-600">{member.email}</td>
+                  <td className="p-4 text-sm text-gray-600">user_{member.user_id.slice(0,4)}@example.com</td>
                   <td className="p-4">
-                    {member.role === 'PROJECT OWNER' ? (
-                      <span className="bg-primary text-white text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded shadow-sm">{member.role}</span>
+                    {member.role_name === 'Admin' ? (
+                      <span className="bg-primary text-white text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded shadow-sm">{member.role_name}</span>
                     ) : (
                       <button className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold bg-white hover:bg-gray-50 transition-all text-primary shadow-sm">
-                        {member.role} <span className="text-gray-400 text-[10px]">▼</span>
+                        {member.role_name || 'Member'} <span className="text-gray-400 text-[10px]">▼</span>
                       </button>
                     )}
                   </td>
                   <td className="p-4">
-                    <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${member.status === 'Active' ? 'text-green-600' : 'text-yellow-600'}`}>
-                      <span className={`w-2 h-2 rounded-full ${member.status === 'Active' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
-                      {member.status}
+                    <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-green-600`}>
+                      <span className={`w-2 h-2 rounded-full bg-green-500 animate-pulse`}></span>
+                      Active
                     </span>
                   </td>
                   <td className="p-4 text-right">
-                    {member.role === 'PROJECT OWNER' ? (
+                    {member.role_name === 'Admin' ? (
                       <span className="text-xs font-bold text-gray-400 uppercase tracking-widest select-none">— (You)</span>
                     ) : (
                       <div className="flex items-center justify-end gap-2">
-                        <button className="text-xs font-bold text-gray-600 hover:text-primary px-3 py-1.5 border border-gray-300 rounded-lg bg-white shadow-sm transition-all">Change Role</button>
-                        <button className="text-xs font-bold text-red-500 hover:text-red-700 px-3 py-1.5 border border-gray-300 rounded-lg bg-white shadow-sm transition-all">Remove ✕</button>
+                        <button 
+                          onClick={() => alert('Role adjustment coming soon!')}
+                          className="text-xs font-bold text-gray-600 hover:text-primary px-3 py-1.5 border border-gray-300 rounded-lg bg-white shadow-sm transition-all"
+                        >
+                          Change Role
+                        </button>
+                        <button 
+                          onClick={() => handleRemoveMember(member.user_id)}
+                          className="text-xs font-bold text-red-500 hover:text-red-700 px-3 py-1.5 border border-gray-300 rounded-lg bg-white shadow-sm transition-all"
+                        >
+                          Remove ✕
+                        </button>
                       </div>
                     )}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="7" className="p-10 text-center text-gray-400">No members found in workspace.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

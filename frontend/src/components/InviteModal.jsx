@@ -1,20 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, ShieldAlert, Save } from 'lucide-react';
+import { workspaceApi } from '../api';
 
 const InviteModal = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('MEMBER');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState('');
+
+  useEffect(() => {
+    const fetchWorkspace = async () => {
+      const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
+      if (wsData.success && wsData.data.length > 0) {
+        setWorkspaceId(wsData.data[0].workspace_id);
+      }
+    };
+    if (isOpen) fetchWorkspace();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle invite logic here
-    onClose();
-    setEmail('');
-    setRole('MEMBER');
-    setMessage('');
+    if (!workspaceId) {
+      alert('Workspace not found');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await workspaceApi.inviteUser(workspaceId, email);
+      alert('Invitation sent successfully!');
+      onClose();
+      setEmail('');
+      setRole('MEMBER');
+      setMessage('');
+    } catch (err) {
+      console.error('Error inviting user:', err);
+      alert('Failed to send invitation: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,9 +108,10 @@ const InviteModal = ({ isOpen, onClose }) => {
             </button>
             <button 
               type="submit" 
-              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all"
+              disabled={loading}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
             >
-              <Save size={14}/> Send Invitation
+              <Save size={14}/> {loading ? 'Sending...' : 'Send Invitation'}
             </button>
           </div>
         </form>

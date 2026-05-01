@@ -1,22 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, CheckSquare, Calendar, User, Tag } from 'lucide-react';
+import { taskApi, workspaceApi } from '../api';
 
 const CreateTask = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState('');
   const [taskData, setTaskData] = useState({
     title: '',
     description: '',
     priority: 'MEDIUM',
-    dueDate: '',
-    assignee: '',
-    tag: 'Branding'
+    deadline: '',
+    assignedTo: '',
   });
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const fetchWorkspace = async () => {
+      const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
+      if (wsData.success && wsData.data.length > 0) {
+        setWorkspaceId(wsData.data[0].workspace_id);
+      }
+    };
+    fetchWorkspace();
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would hit an API endpoint
-    navigate('/tasks');
+    if (!workspaceId) {
+      alert('Workspace not found');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await taskApi.create({
+        ...taskData,
+        workspaceId
+      });
+      navigate('/tasks');
+    } catch (err) {
+      console.error('Error creating task:', err);
+      alert('Failed to create task: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,8 +104,8 @@ const CreateTask = () => {
               </label>
               <input 
                 type="date"
-                value={taskData.dueDate}
-                onChange={(e) => setTaskData({...taskData, dueDate: e.target.value})}
+                value={taskData.deadline}
+                onChange={(e) => setTaskData({...taskData, deadline: e.target.value})}
                 className="p-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 focus:outline-none focus:border-primary bg-white shadow-inner"
               />
             </div>
@@ -89,8 +117,8 @@ const CreateTask = () => {
                 Assignee
               </label>
               <select 
-                value={taskData.assignee}
-                onChange={(e) => setTaskData({...taskData, assignee: e.target.value})}
+                value={taskData.assignedTo}
+                onChange={(e) => setTaskData({...taskData, assignedTo: e.target.value})}
                 className="p-2.5 border border-gray-300 rounded-lg text-xs font-bold text-primary focus:outline-none focus:border-primary cursor-pointer bg-white shadow-sm"
               >
                 <option value="">Unassigned</option>
@@ -136,9 +164,10 @@ const CreateTask = () => {
             </button>
             <button 
               type="submit" 
-              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all"
+              disabled={loading}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
             >
-              <Save size={14}/> Save Task
+              <Save size={14}/> {loading ? 'Saving...' : 'Save Task'}
             </button>
           </div>
         </form>

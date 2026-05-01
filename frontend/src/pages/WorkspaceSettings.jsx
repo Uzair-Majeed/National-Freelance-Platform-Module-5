@@ -1,14 +1,64 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, ShieldAlert, AlertTriangle, Save, HardDrive, Globe, ArrowLeft } from 'lucide-react';
+import { workspaceApi } from '../api';
 
 const WorkspaceSettings = () => {
   const navigate = useNavigate();
+  const [workspaceId, setWorkspaceId] = useState('');
+  const [wsName, setWsName] = useState('');
+  const [wsDesc, setWsDesc] = useState('');
+  const [loading, setLoading] = useState(false);
   const generalRef = useRef(null);
   const memberRef = useRef(null);
   const storageRef = useRef(null);
   const securityRef = useRef(null);
   const dangerRef = useRef(null);
+
+  useEffect(() => {
+    const fetchWorkspace = async () => {
+      const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
+      if (wsData.success && wsData.data.length > 0) {
+        const ws = wsData.data[0];
+        setWorkspaceId(ws.workspace_id);
+        setWsName(ws.name);
+        setWsDesc('Strategic branding audit and core infrastructure modernisation.');
+      }
+    };
+    fetchWorkspace();
+  }, []);
+
+  const handleSave = async () => {
+    if (!workspaceId) return;
+    try {
+      setLoading(true);
+      await workspaceApi.update(workspaceId, { name: wsName });
+      alert('Settings saved successfully!');
+    } catch (err) {
+      alert('Failed to save settings: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (!workspaceId) return;
+    if (!window.confirm('CRITICAL: This will permanently delete all data in this workspace. Are you absolutely sure?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await workspaceApi.delete(workspaceId);
+      alert('Workspace purged successfully.');
+      navigate('/');
+    } catch (err) {
+      console.error('Error purging workspace:', err);
+      alert('Failed to purge workspace: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const scrollToSection = (ref) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -51,7 +101,7 @@ const WorkspaceSettings = () => {
       </div>
 
       {/* Right Main Scroll Container */}
-      <div className="flex-1 overflow-y-auto pr-4 space-y-6 pb-12 max-h-full">
+      <div className="flex-1 overflow-y-auto pr-4 space-y-6 pb-12 max-h-full text-primary font-medium">
         
         {/* Section 1: General Details */}
         <div ref={generalRef} className="bg-surface rounded-xl border border-border p-6 shadow-sm scroll-mt-6 flex flex-col">
@@ -63,7 +113,8 @@ const WorkspaceSettings = () => {
               <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Workspace Name</label>
               <input 
                 type="text" 
-                defaultValue="Apollo Brand Redesign" 
+                value={wsName}
+                onChange={(e) => setWsName(e.target.value)}
                 className="border border-gray-300 rounded-lg p-2.5 text-sm font-bold focus:outline-none focus:border-primary shadow-inner w-full text-primary"
               />
             </div>
@@ -71,7 +122,8 @@ const WorkspaceSettings = () => {
               <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Workspace Purpose / Description</label>
               <textarea 
                 rows={3}
-                defaultValue="Strategic branding audit, visual guidelines execution, and core infrastructure modernization workflows." 
+                value={wsDesc}
+                onChange={(e) => setWsDesc(e.target.value)}
                 className="border border-gray-300 rounded-lg p-2.5 text-sm font-medium focus:outline-none focus:border-primary shadow-inner w-full text-primary leading-relaxed"
               />
             </div>
@@ -143,19 +195,30 @@ const WorkspaceSettings = () => {
               <p className="text-xs font-bold text-primary">Delete this workspace</p>
               <p className="text-[10px] font-semibold text-gray-400 mt-0.5">Permanently wipes activity, files, chats. Action irreversible.</p>
             </div>
-            <button className="px-4 py-2 border border-red-300 hover:bg-red-50 text-red-600 rounded-lg text-xs font-extrabold tracking-wider uppercase shadow-sm transition-all">
-              Purge Workspace
+            <button 
+              onClick={handlePurge}
+              disabled={loading}
+              className="px-4 py-2 border border-red-300 hover:bg-red-50 text-red-600 rounded-lg text-xs font-extrabold tracking-wider uppercase shadow-sm transition-all disabled:opacity-50"
+            >
+              {loading ? 'Purging...' : 'Purge Workspace'}
             </button>
           </div>
         </div>
 
         {/* Sticky controls at bottom */}
         <div className="flex justify-end items-center gap-3 pt-4 border-t border-border">
-          <button className="px-4 py-2 bg-white border border-gray-300 text-primary rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm transition-all">
+          <button 
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-white border border-gray-300 text-primary rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm transition-all"
+          >
             Discard
           </button>
-          <button className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all">
-            <Save size={14}/> Save Settings
+          <button 
+            onClick={handleSave}
+            disabled={loading}
+            className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            <Save size={14}/> {loading ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
 

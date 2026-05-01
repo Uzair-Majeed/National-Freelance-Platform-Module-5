@@ -67,6 +67,15 @@ const removeMember = async (req, res) => {
   }
 };
 
+const getWorkspaceMembers = async (req, res) => {
+  try {
+    const members = await workspaceService.getMembers(req.params.workspaceId);
+    res.status(200).json({ success: true, data: members });
+  } catch (err) {
+    res.status(404).json({ success: false, message: err.message });
+  }
+};
+
 const deleteWorkspace = async (req, res) => {
   try {
     const requesterId = req.user?.userId;
@@ -77,4 +86,14 @@ const deleteWorkspace = async (req, res) => {
   }
 };
 
-module.exports = { createWorkspace, inviteUser, getWorkspaceById, getWorkspacesByProject, addMember, removeMember, deleteWorkspace };
+const updateWorkspace = async (req, res) => {
+  try {
+    const requesterId = req.user?.userId;
+    const workspace = await workspaceService.updateWorkspace(req.params.workspaceId, req.body, requesterId);
+    res.status(200).json({ success: true, data: workspace });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { createWorkspace, inviteUser, getWorkspaceById, getWorkspacesByProject, addMember, removeMember, getWorkspaceMembers, deleteWorkspace, updateWorkspace };

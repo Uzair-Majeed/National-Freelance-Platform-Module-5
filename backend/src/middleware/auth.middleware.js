@@ -7,7 +7,7 @@
 const authMiddleware = (req, res, next) => {
   // Dummy authenticated user
   req.user = {
-    userId: '11111111-1111-1111-1111-111111111111', // Dummy UUID
+    userId: '550e8400-e29b-41d4-a716-446655440000', // Dummy UUID consistent with seed data
     email: 'test@example.com',
   };
   next();

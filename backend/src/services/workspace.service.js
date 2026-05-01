@@ -33,6 +33,10 @@ const removeMember = async (workspaceId, userId, requesterId) => {
   await activityService.logActivity(requesterId, workspaceId, 'DELETED', 'WORKSPACE_MEMBER', userId, { userId }, null);
 };
 
+const getMembers = async (workspaceId) => {
+  return workspaceRepository.getMembers(workspaceId);
+};
+
 const getWorkspaceById = async (workspaceId) => {
   const workspace = await workspaceRepository.findById(workspaceId);
   if (!workspace) throw new Error(`Workspace with ID ${workspaceId} not found`);
@@ -50,12 +54,21 @@ const deleteWorkspace = async (workspaceId, requesterId) => {
   await activityService.logActivity(requesterId, workspaceId, 'DELETED', 'WORKSPACE', workspaceId, workspace, null);
 };
 
+const updateWorkspace = async (workspaceId, updates, requesterId) => {
+  const oldWs = await workspaceRepository.findById(workspaceId);
+  const ws = await workspaceRepository.update(workspaceId, updates);
+  await activityService.logActivity(requesterId, workspaceId, 'UPDATED', 'WORKSPACE', workspaceId, oldWs, ws);
+  return ws;
+};
+
 module.exports = {
   createWorkspace,
   inviteUser,
   addMember,
   removeMember,
+  getMembers,
   getWorkspaceById,
   getWorkspacesByProject,
   deleteWorkspace,
+  updateWorkspace,
 };

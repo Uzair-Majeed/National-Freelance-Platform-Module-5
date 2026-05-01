@@ -1,68 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Plus, Users, Clock, ArrowRight, Folder, PlusCircle, X } from 'lucide-react';
+import { workspaceApi } from '../api';
 
 const Home = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDesc, setNewWorkspaceDesc] = useState('');
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const initialWorkspaces = [
-    {
-      id: 1,
-      name: 'Apollo Brand Redesign',
-      description: 'Strategic branding audit, visual guidelines execution, and core infrastructure modernization workflows.',
-      tasksDone: 17,
-      totalTasks: 25,
-      members: ['Sarah M.', 'Alex R.', 'Marcus J.', 'Dan C.'],
-      updatedAt: '2 hours ago',
-      tag: 'Design'
-    },
-    {
-      id: 2,
-      name: 'Zenith Mobile App',
-      description: 'Cross-platform e-commerce implementation utilizing React Native and advanced payment gateways.',
-      tasksDone: 5,
-      totalTasks: 12,
-      members: ['Sarah M.', 'Dan C.', 'Nina P.'],
-      updatedAt: '1 day ago',
-      tag: 'Development'
-    },
-    {
-      id: 3,
-      name: 'Orion CRM Integration',
-      description: 'Connecting legacy database architectures into modern client portal management rails.',
-      tasksDone: 8,
-      totalTasks: 8,
-      members: ['Alex R.', 'Paul G.', 'Marcus J.'],
-      updatedAt: '3 days ago',
-      tag: 'Infrastructure'
-    }
-  ];
+  const PROJECT_ID = '123e4567-e89b-12d3-a456-426614174000';
 
-  const [workspaces, setWorkspaces] = useState(initialWorkspaces);
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        setLoading(true);
+        const wsData = await workspaceApi.getByProject(PROJECT_ID);
+        if (wsData.success) {
+          // Map backend data to match UI expectations
+          const mapped = wsData.data.map(ws => ({
+            id: ws.workspace_id,
+            name: ws.name,
+            description: ws.description || 'Standard corporate workflow space.',
+            tasksDone: 0,
+            totalTasks: 0,
+            members: ['Sarah M.', 'Alex R.'], // Placeholder members for demo UI
+            updatedAt: 'Just now',
+            tag: 'Design'
+          }));
+          setWorkspaces(mapped);
+        }
+      } catch (err) {
+        console.error('Error fetching workspaces:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkspaces();
+  }, []);
 
-  const handleCreateWorkspace = (e) => {
+  const handleCreateWorkspace = async (e) => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
 
-    const created = {
-      id: workspaces.length + 1,
-      name: newWorkspaceName,
-      description: newWorkspaceDesc || 'Standard corporate workflow space.',
-      tasksDone: 0,
-      totalTasks: 0,
-      members: ['Alex R.'],
-      updatedAt: 'Just now',
-      tag: 'General'
-    };
+    try {
+      const result = await workspaceApi.create({
+        name: newWorkspaceName,
+        projectId: PROJECT_ID
+      });
 
-    setWorkspaces([created, ...workspaces]);
-    setNewWorkspaceName('');
-    setNewWorkspaceDesc('');
-    setIsModalOpen(false);
+      if (result.success) {
+        const created = {
+          id: result.data.workspace_id,
+          name: result.data.name,
+          description: newWorkspaceDesc || 'Standard corporate workflow space.',
+          tasksDone: 0,
+          totalTasks: 0,
+          members: ['Sarah M.'],
+          updatedAt: 'Just now',
+          tag: 'General'
+        };
+
+        setWorkspaces([created, ...workspaces]);
+        setNewWorkspaceName('');
+        setNewWorkspaceDesc('');
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Error creating workspace:', err);
+      alert('Failed to create workspace: ' + err.message);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-primary font-sans">

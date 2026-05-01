@@ -44,6 +44,17 @@ const removeMember = async (workspaceId, userId) => {
   );
 };
 
+const getMembers = async (workspaceId) => {
+  const result = await pool.query(
+    `SELECT wm.*, r.role_name 
+     FROM WORKSPACE_MEMBERS wm
+     LEFT JOIN WORKSPACE_ROLES r ON wm.role_id = r.role_id
+     WHERE wm.workspace_id = $1`,
+    [workspaceId]
+  );
+  return result.rows;
+};
+
 const createInvitation = async (workspaceId, invitedBy, inviteeEmail) => {
   const result = await pool.query(
     'INSERT INTO WORKSPACE_INVITATIONS (workspace_id, invited_by, invitee_email) VALUES ($1, $2, $3) RETURNING *',
@@ -75,4 +86,12 @@ const softDelete = async (workspaceId) => {
   );
 };
 
-module.exports = { create, findById, findByProject, addMember, removeMember, createInvitation, findInvitation, updateInvitationStatus, softDelete };
+const update = async (workspaceId, { name, is_active }) => {
+  const result = await pool.query(
+    'UPDATE WORKSPACES SET name = COALESCE($2, name), is_active = COALESCE($3, is_active), updated_at = CURRENT_TIMESTAMP WHERE workspace_id = $1 RETURNING *',
+    [workspaceId, name, is_active]
+  );
+  return result.rows[0];
+};
+
+module.exports = { create, findById, findByProject, addMember, removeMember, getMembers, createInvitation, findInvitation, updateInvitationStatus, softDelete, update };
