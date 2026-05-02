@@ -1,3 +1,16 @@
+-- 1. Cleanup: Drop existing tables in reverse dependency order
+DROP TABLE IF EXISTS ACTIVITY_LOGS;
+DROP TABLE IF EXISTS FILES;
+DROP TABLE IF EXISTS TASKS;
+DROP TABLE IF EXISTS WORKSPACE_INVITATIONS;
+DROP TABLE IF EXISTS WORKSPACE_MEMBERS;
+DROP TABLE IF EXISTS WORKSPACE_ROLES;
+DROP TABLE IF EXISTS WORKSPACES;
+DROP TABLE IF EXISTS USERS;
+-- =====================================================================
+-- National Freelance Platform - Module 5: Collaboration & Team Workspace
+-- Database Schema
+-- =====================================================================
 -- =====================================================================
 -- National Freelance Platform - Module 5: Collaboration & Team Workspace
 -- Database Schema (Standardized with workspace_ prefix)
@@ -100,3 +113,55 @@ CREATE TABLE IF NOT EXISTS workspace_activity_logs (
     new_value JSONB NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+
+
+
+-- CHAT MODULE
+
+-- REFINED MODULE 6 SCHEMA FOR SUPABASE INTEGRATION
+-- Linked to your existing 'users' and 'workspaces' tables
+-- 1. CLEANUP: Drop existing chat tables (Order matters due to foreign keys)-- 1. FORCED CLEANUP (CASCADE handles any hidden dependencies)
+DROP TABLE IF EXISTS chat_message_receipts CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS chat_room_members CASCADE;
+DROP TABLE IF EXISTS chat_rooms CASCADE;
+
+-- 2. RE-DEPLOYMENT WITH CORRECT TYPES
+
+-- Chat Rooms
+CREATE TABLE chat_rooms (
+    id SERIAL PRIMARY KEY,
+    uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+    room_type VARCHAR(10) NOT NULL CHECK (room_type IN ('direct', 'group')),
+    room_name VARCHAR(100),
+    workspace_id UUID NOT NULL,     -- Matches your workspace_list(workspace_id)
+    created_by UUID NOT NULL,       -- Matches workspace_users(user_id)
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CHECK ((room_type = 'direct' AND room_name IS NULL) OR (room_type = 'group' AND room_name IS NOT NULL))
+);
+
+-- Chat Messages
+CREATE TABLE chat_messages (
+    id SERIAL PRIMARY KEY,
+    uuid UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+    room_id INTEGER NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL,        -- Matches workspace_users(user_id)
+    reply_to_msg_id INTEGER REFERENCES chat_messages(id) ON DELETE SET NULL,
+    message_type VARCHAR(15) DEFAULT 'text' CHECK (message_type IN ('text', 'media', 'meeting_link', 'system', 'file')),
+    content TEXT,
+    media_id UUID,                  -- Matches workspace_files(file_id)
+    status VARCHAR(10) DEFAULT 'sent' CHECK (status IN ('sent', 'delivered', 'read', 'failed')),
+    is_edited BOOLEAN DEFAULT FALSE,
+    edited_at TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. INDEXES
+CREATE INDEX idx_chat_rooms_workspace ON chat_rooms(workspace_id);
+CREATE INDEX idx_chat_messages_room ON chat_messages(room_id);
+CREATE INDEX idx_chat_messages_sender ON chat_messages(sender_id);
