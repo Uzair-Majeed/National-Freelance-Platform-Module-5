@@ -5,9 +5,15 @@
  */
 
 const authMiddleware = (req, res, next) => {
+  // Read identity override from header (if provided by frontend switcher)
+  const overrideUserId = req.headers['x-user-id'];
+
+  console.log(`[AuthMiddleware] Incoming Request: ${req.method} ${req.url}`);
+  console.log(`[AuthMiddleware] X-User-Id Header: ${overrideUserId || 'NONE (Defaulting to Admin)'}`);
+
   // Dummy authenticated user
   req.user = {
-    userId: '550e8400-e29b-41d4-a716-446655440000', // Dummy UUID consistent with seed data
+    userId: overrideUserId || '550e8400-e29b-41d4-a716-446655440000',
     email: 'test@example.com',
   };
   next();

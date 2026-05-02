@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, CheckSquare, Calendar, User, Tag } from 'lucide-react';
-import { taskApi, workspaceApi } from '../api';
+import { ArrowLeft, Save, CheckSquare, Paperclip, Activity, Zap } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { taskApi, workspaceApi, fileApi } from '../api';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 const CreateTask = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [workspaceId, setWorkspaceId] = useState('');
+  const { workspaceId } = useWorkspace();
+  const [loading, setLoading]   = useState(false);
+  const [members, setMembers]   = useState([]);
+  const [attachedFile, setAttachedFile] = useState(null);
   const [taskData, setTaskData] = useState({
     title: '',
     description: '',
@@ -16,158 +20,158 @@ const CreateTask = () => {
   });
 
   useEffect(() => {
-    const fetchWorkspace = async () => {
-      const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
-      if (wsData.success && wsData.data.length > 0) {
-        setWorkspaceId(wsData.data[0].workspace_id);
-      }
-    };
-    fetchWorkspace();
-  }, []);
+    if (!workspaceId) { navigate('/'); return; }
+    workspaceApi.getMembers(workspaceId).then(res => {
+      if (res.success) setMembers(res.data);
+    }).catch(console.error);
+  }, [workspaceId, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!workspaceId) {
-      alert('Workspace not found');
-      return;
-    }
-
+    if (!workspaceId) { toast.error('No workspace selected'); return; }
     try {
       setLoading(true);
-      await taskApi.create({
-        ...taskData,
-        workspaceId
+      const res = await taskApi.create({
+        workspaceId,
+        title:       taskData.title,
+        description: taskData.description,
+        priority:    taskData.priority,
+        deadline:    taskData.deadline || null,
+        assignedTo:  taskData.assignedTo || null,
       });
-      navigate('/tasks');
+
+      if (res.success && attachedFile) {
+        const formData = new FormData();
+        formData.append('file', attachedFile);
+        formData.append('workspaceId', workspaceId);
+        formData.append('taskId', res.data.task_id);
+        await fileApi.upload(formData);
+      }
+
+      if (res.success) {
+        toast.success('Task created successfully');
+        navigate('/tasks');
+      }
     } catch (err) {
-      console.error('Error creating task:', err);
-      alert('Failed to create task: ' + err.message);
+      toast.error('Failed to create task: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const field = (key) => ({
+    value: taskData[key],
+    onChange: (e) => setTaskData({ ...taskData, [key]: e.target.value }),
+  });
+
+  const btnClass = "flex items-center justify-center gap-2 px-6 py-3 bg-black text-white border border-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg active:scale-95";
+
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-primary transition-all self-start bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
-        <ArrowLeft size={14}/> Back
+    <div className="flex flex-col gap-8 w-full pb-20">
+      <button onClick={() => navigate(-1)} className={btnClass + " self-start"}>
+        <ArrowLeft size={16} /> Abort Operation
       </button>
 
-      <div className="bg-surface rounded-xl border border-border shadow-sm p-6 flex flex-col">
-        <h2 className="text-xl font-bold text-primary flex items-center gap-2 mb-6">
-          <CheckSquare size={20}/> Create New Task
-        </h2>
+      <div className="bg-white rounded-3xl border border-border shadow-xl p-10 flex flex-col max-w-4xl mx-auto w-full transition-all hover:shadow-2xl">
+        <div className="flex items-center justify-between mb-10 border-b border-border pb-8">
+            <h2 className="text-3xl font-black text-primary flex items-center gap-4 uppercase tracking-tighter">
+                <CheckSquare size={32} /> Initialize New Task
+            </h2>
+            <div className="bg-black text-white p-2 rounded-lg shadow-lg">
+                <Zap size={20} />
+            </div>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Task Title</label>
-            <input 
-              type="text"
-              required
-              value={taskData.title}
-              onChange={(e) => setTaskData({...taskData, title: e.target.value})}
-              placeholder="e.g., Design new logo variants"
-              className="border border-gray-300 rounded-lg p-2.5 text-sm font-bold focus:outline-none focus:border-primary shadow-inner w-full text-primary"
+        <form onSubmit={handleSubmit} className="space-y-8">
+
+          {/* Title */}
+          <div className="flex flex-col gap-3">
+            <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">DESIGNATION / TASK TITLE *</label>
+            <input
+              type="text" required
+              {...field('title')}
+              placeholder="E.G., DEPLOY INFRASTRUCTURE NODE"
+              className="border border-border rounded-xl p-5 text-sm font-black uppercase tracking-widest focus:outline-none focus:border-primary bg-gray-50 shadow-inner w-full text-primary placeholder-gray-400"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Description</label>
-            <textarea 
+          {/* Description */}
+          <div className="flex flex-col gap-3">
+            <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">OPERATIONAL BRIEFING</label>
+            <textarea
               rows={4}
-              value={taskData.description}
-              onChange={(e) => setTaskData({...taskData, description: e.target.value})}
-              placeholder="Provide full details here..."
-              className="border border-gray-300 rounded-lg p-2.5 text-sm font-medium focus:outline-none focus:border-primary shadow-inner w-full text-primary leading-relaxed"
+              {...field('description')}
+              placeholder="PROVIDE FULL ARCHITECTURAL DETAILS HERE..."
+              className="border border-border rounded-xl p-5 text-sm font-bold focus:outline-none focus:border-primary bg-gray-50 shadow-inner w-full text-primary leading-relaxed uppercase tracking-wider placeholder-gray-400"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                Priority
-              </label>
-              <select 
-                value={taskData.priority}
-                onChange={(e) => setTaskData({...taskData, priority: e.target.value})}
-                className="p-2.5 border border-gray-300 rounded-lg text-xs font-bold text-primary focus:outline-none focus:border-primary cursor-pointer bg-white shadow-sm"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Priority */}
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">PRIORITY SEQUENCE</label>
+              <select
+                {...field('priority')}
+                className="w-full p-4 border border-border rounded-xl text-xs font-black uppercase tracking-widest text-primary focus:outline-none focus:border-primary cursor-pointer bg-white shadow-sm hover:shadow-md transition-all"
               >
-                <option value="HIGH">High Priority</option>
-                <option value="MEDIUM">Medium Priority</option>
-                <option value="LOW">Low Priority</option>
+                <option value="HIGH">CRITICAL PRIORITY</option>
+                <option value="MEDIUM">STANDARD PRIORITY</option>
+                <option value="LOW">LOW PRIORITY</option>
               </select>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                Due Date
-              </label>
-              <input 
+            {/* Due Date */}
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">TERMINATION DEADLINE</label>
+              <input
                 type="date"
-                value={taskData.deadline}
-                onChange={(e) => setTaskData({...taskData, deadline: e.target.value})}
-                className="p-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-600 focus:outline-none focus:border-primary bg-white shadow-inner"
+                {...field('deadline')}
+                className="p-4 border border-border rounded-xl text-xs font-black uppercase tracking-widest text-primary focus:outline-none focus:border-primary bg-white shadow-inner transition-all"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                Assignee
-              </label>
-              <select 
-                value={taskData.assignedTo}
-                onChange={(e) => setTaskData({...taskData, assignedTo: e.target.value})}
-                className="p-2.5 border border-gray-300 rounded-lg text-xs font-bold text-primary focus:outline-none focus:border-primary cursor-pointer bg-white shadow-sm"
+          {/* Assignee & File Attachment */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">TARGET ASSIGNEE</label>
+              <select
+                {...field('assignedTo')}
+                className="p-4 border border-border rounded-xl text-xs font-black uppercase tracking-widest text-primary focus:outline-none focus:border-primary cursor-pointer bg-white shadow-sm transition-all"
               >
-                <option value="">Unassigned</option>
-                <option value="Sarah Mitchell">Sarah Mitchell</option>
-                <option value="Marcus Reid">Marcus Reid</option>
-                <option value="Mark R.">Mark R.</option>
+                <option value="">UNASSIGNED UNIT</option>
+                {members.map(m => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.email.toUpperCase()}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                Tag
-              </label>
-              <input 
-                type="text"
-                value={taskData.tag}
-                onChange={(e) => setTaskData({...taskData, tag: e.target.value})}
-                placeholder="e.g., Branding"
-                className="border border-gray-300 rounded-lg p-2.5 text-xs font-semibold focus:outline-none focus:border-primary shadow-inner text-primary"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Attached Assets / Files</label>
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gray-50/50 flex flex-col items-center justify-center gap-2 text-center hover:border-primary transition-all cursor-pointer group shadow-inner">
-              <div className="w-10 h-10 rounded-full bg-white border shadow-sm flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors">
-                <Save size={18} />
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] ml-1">LINKED ASSET (OPTIONAL)</label>
+              <div className="relative group">
+                <input
+                  type="file"
+                  onChange={(e) => setAttachedFile(e.target.files[0])}
+                  className="w-full text-xs font-black uppercase tracking-widest text-gray-800 file:mr-6 file:py-4 file:px-8 file:rounded-xl file:border-none file:text-xs file:font-black file:uppercase file:tracking-[0.2em] file:bg-black file:text-white hover:file:bg-opacity-90 transition-all border border-border rounded-xl bg-gray-50 shadow-inner cursor-pointer"
+                />
               </div>
-              <p className="text-xs font-bold text-primary">Click to upload or drag and drop</p>
-              <p className="text-[10px] font-medium text-gray-400">PDF, DOCX, PNG or JPG up to 50MB</p>
-              <input type="file" className="hidden" />
+              {attachedFile && (
+                <div className="flex items-center gap-3 text-xs font-black text-primary bg-white px-4 py-2 rounded-lg border border-border shadow-sm mt-2">
+                    <Activity size={12} className="animate-pulse" />
+                    FILE STAGED: {attachedFile.name.toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-end items-center gap-3 pt-4 border-t border-border mt-6">
-            <button 
-              type="button"
-              onClick={() => navigate(-1)} 
-              className="px-4 py-2 bg-white border border-gray-300 text-primary rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm transition-all"
-            >
+          <div className="flex justify-end items-center gap-4 pt-10 border-t border-border mt-12">
+            <button type="button" onClick={() => navigate(-1)} className={btnClass}>
               Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
-            >
-              <Save size={14}/> {loading ? 'Saving...' : 'Save Task'}
+            <button type="submit" disabled={loading} className={btnClass}>
+              <Save size={20} /> {loading ? 'SAVING…' : 'INITIALIZE TASK'}
             </button>
           </div>
         </form>

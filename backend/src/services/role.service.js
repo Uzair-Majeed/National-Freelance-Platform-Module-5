@@ -12,9 +12,15 @@ const activityService = require('./activity.service');
  */
 const checkPermission = async (userId, workspaceId, action) => {
   const memberRole = await roleRepository.getMemberRole(userId, workspaceId);
-  if (!memberRole) return false;
+  if (!memberRole) {
+    console.log(`[RoleService] No role found for user ${userId} in workspace ${workspaceId}`);
+    return false;
+  }
   const permissions = memberRole.permissions;
-  return permissions[action] === true || permissions['*'] === true;
+  const isAllowed = permissions[action] === true || permissions['*'] === true;
+  
+  console.log(`[RoleService] Checking permission: User=${userId}, Action=${action}, Allowed=${isAllowed}`);
+  return isAllowed;
 };
 
 /**

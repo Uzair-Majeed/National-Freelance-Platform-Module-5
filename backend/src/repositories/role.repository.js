@@ -7,19 +7,19 @@ const pool = require('../config/db');
 
 const create = async ({ workspace_id, role_name, permissions }) => {
   const result = await pool.query(
-    'INSERT INTO WORKSPACE_ROLES (workspace_id, role_name, permissions) VALUES ($1, $2, $3) RETURNING *',
+    'INSERT INTO workspace_roles (workspace_id, role_name, permissions) VALUES ($1, $2, $3) RETURNING *',
     [workspace_id, role_name, JSON.stringify(permissions)]
   );
   return result.rows[0];
 };
 
 const findById = async (roleId) => {
-  const result = await pool.query('SELECT * FROM WORKSPACE_ROLES WHERE role_id = $1', [roleId]);
+  const result = await pool.query('SELECT * FROM workspace_roles WHERE role_id = $1', [roleId]);
   return result.rows[0] || null;
 };
 
 const findByWorkspace = async (workspaceId) => {
-  const result = await pool.query('SELECT * FROM WORKSPACE_ROLES WHERE workspace_id = $1 ORDER BY role_name ASC', [workspaceId]);
+  const result = await pool.query('SELECT * FROM workspace_roles WHERE workspace_id = $1 ORDER BY role_name ASC', [workspaceId]);
   return result.rows;
 };
 
@@ -28,8 +28,8 @@ const findByWorkspace = async (workspaceId) => {
  */
 const getMemberRole = async (userId, workspaceId) => {
   const result = await pool.query(
-    `SELECT r.* FROM WORKSPACE_ROLES r
-     JOIN WORKSPACE_MEMBERS wm ON wm.role_id = r.role_id
+    `SELECT r.* FROM workspace_roles r
+     JOIN workspace_members wm ON wm.role_id = r.role_id
      WHERE wm.user_id = $1 AND wm.workspace_id = $2`,
     [userId, workspaceId]
   );
@@ -41,7 +41,7 @@ const getMemberRole = async (userId, workspaceId) => {
  */
 const updateMemberRole = async (userId, workspaceId, roleId) => {
   const result = await pool.query(
-    'UPDATE WORKSPACE_MEMBERS SET role_id = $3 WHERE user_id = $1 AND workspace_id = $2 RETURNING *',
+    'UPDATE workspace_members SET role_id = $3 WHERE user_id = $1 AND workspace_id = $2 RETURNING *',
     [userId, workspaceId, roleId]
   );
   return result.rows[0];

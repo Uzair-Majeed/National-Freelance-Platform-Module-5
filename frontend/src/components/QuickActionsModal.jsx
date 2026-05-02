@@ -23,14 +23,14 @@ const QuickActionsModal = ({ isOpen, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-primary/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-surface rounded-2xl shadow-2xl border border-border max-w-lg w-full p-6 animate-slide-up">
-        
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-lg font-bold text-primary">Quick Workspace Actions</h3>
             <p className="text-xs text-gray-400 font-medium mt-0.5">Select an operation to proceed seamlessly.</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-primary transition-colors bg-gray-50 border p-1.5 rounded-lg">
-            <X size={18}/>
+            <X size={18} />
           </button>
         </div>
 
@@ -39,7 +39,7 @@ const QuickActionsModal = ({ isOpen, onClose }) => {
             <button
               key={index}
               onClick={() => handleSelection(action.path)}
-              className="flex items-start gap-3.5 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-primary hover:shadow-md transition-all text-left group"
+              className="flex items-start gap-3.5 p-4 bg-white border border-border rounded-xl shadow-sm hover:border-primary hover:shadow-md transition-all text-left group"
             >
               <div className="w-10 h-10 bg-gray-50 group-hover:bg-primary/5 border rounded-xl flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors shadow-inner shrink-0">
                 {action.icon}

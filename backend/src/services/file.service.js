@@ -6,7 +6,7 @@
 
 const fileRepository = require('../repositories/file.repository');
 const activityService = require('./activity.service');
-const fileStorageAdapter = require('../adapters/fileStorage.adapter');
+const fileStorageAdapter = require('./fileStorage');
 
 const uploadFile = async (userId, workspaceId, taskId, fileBuffer, fileMetadata) => {
   const { originalname, mimetype, size } = fileMetadata;

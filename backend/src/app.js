@@ -10,6 +10,7 @@ const roleRoutes = require('./routes/role.routes');
 const fileRoutes = require('./routes/file.routes');
 const activityRoutes = require('./routes/activity.routes');
 const groupChatRoutes = require('./routes/groupchat.routes');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 
@@ -17,10 +18,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Authentication Middleware (Dummy for now)
+// Public API Routes (No auth needed)
+app.use('/api/auth', authRoutes);
+
+// Authentication Middleware (Applied to all following routes)
 app.use(authMiddleware);
 
-// API Routes
+// Protected API Routes
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/roles', roleRoutes);

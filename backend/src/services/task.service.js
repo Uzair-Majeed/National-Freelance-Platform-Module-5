@@ -24,7 +24,7 @@ const assignTask = async (taskId, userId, requesterId) => {
 
 const updateTaskStatus = async (taskId, status, requesterId) => {
   // Relaxed enum constraint since DB uses VARCHAR now, but we can keep app-level validation
-  const validStatuses = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'BLOCKED'];
+  const validStatuses = ['TODO', 'IN_PROGRESS', 'UNDER_REVIEW', 'DONE', 'BLOCKED'];
   if (!validStatuses.includes(status)) throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
   const oldTask = await taskRepository.findById(taskId);
   const task = await taskRepository.update(taskId, { status });
@@ -33,10 +33,28 @@ const updateTaskStatus = async (taskId, status, requesterId) => {
 };
 
 const updateTask = async (taskId, updates, requesterId) => {
+  const { _comment, _fileId, _fileName, ...taskUpdates } = updates;
   const oldTask = await taskRepository.findById(taskId);
-  const task = await taskRepository.update(taskId, updates);
-  await activityService.logActivity(requesterId, task.workspace_id, 'UPDATED', 'TASK', taskId, oldTask, task);
-  return task;
+  
+  if (_comment || _fileId) {
+    await activityService.logActivity(
+      requesterId, 
+      oldTask.workspace_id, 
+      'COMMENT', 
+      'TASK', 
+      taskId, 
+      null, 
+      { text: _comment, file_id: _fileId, file_name: _fileName }
+    );
+  }
+
+  if (Object.keys(taskUpdates).length > 0) {
+    const task = await taskRepository.update(taskId, taskUpdates);
+    await activityService.logActivity(requesterId, task.workspace_id, 'UPDATED', 'TASK', taskId, oldTask, task);
+    return task;
+  }
+  
+  return oldTask;
 };
 
 const deleteTask = async (taskId, requesterId) => {

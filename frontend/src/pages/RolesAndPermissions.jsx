@@ -1,89 +1,160 @@
-import React from 'react';
-import { ShieldAlert, Check, X, Save, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Check, X, Save, Users, Loader2, ShieldCheck, Key } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { roleApi, workspaceApi } from '../api';
+import { useWorkspace } from '../context/WorkspaceContext';
+
+const PERMISSION_KEYS = [
+  { key: 'CREATE_TASK',             label: 'CREATE TASK' },
+  { key: 'EDIT_TASK',               label: 'EDIT TASK' },
+  { key: 'DELETE_TASK',             label: 'DELETE TASK' },
+  { key: 'INVITE_MEMBER',           label: 'INVITE MEMBER' },
+  { key: 'REMOVE_MEMBER',           label: 'REMOVE MEMBER' },
+  { key: 'VIEW_ACTIVITY_LOG',       label: 'VIEW ACTIVITY LOG' },
+  { key: 'ASSIGN_ROLE',             label: 'ASSIGN ROLE' },
+  { key: 'EDIT_WORKSPACE_SETTINGS', label: 'EDIT WORKSPACE SETTINGS' },
+];
+
+const ROLE_EMOJIS = { ADMIN: '👑', MANAGER: '💼', MEMBER: '👤' };
+
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const RolesAndPermissions = () => {
-  const permissions = [
-    { role: 'Project Owner', permissions: [true, true, true, true, true, true, true] },
-    { role: 'Project Manager', permissions: [true, true, true, true, true, true, false] },
-    { role: 'Team Member', permissions: [false, 'Own tasks only', false, false, false, false, false] },
-  ];
+  const [roles, setRoles]     = useState([]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [canAssignRole, setCanAssignRole]   = useState(false);
 
-  const headers = [
-    'CREATE TASK', 'EDIT TASK', 'DELETE TASK', 
-    'INVITE MEMBER', 'REMOVE MEMBER', 'VIEW ACTIVITY LOG', 'EDIT WORKSPACE SETTINGS'
-  ];
+  const { workspaceId } = useWorkspace();
 
-  const members = [
-    { name: 'James Dawson', role: 'PROJECT OWNER', email: 'james.dawson@workspace.io', status: 'PROTECTED', isUser: true },
-    { name: 'Tom Nguyen', role: 'Team Member', email: 'tom.nguyen@workspace.io', status: 'ACTIVE', isUser: false }
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [rolesRes, membersRes, permRes] = await Promise.all([
+        roleApi.getByWorkspace(workspaceId),
+        workspaceApi.getMembers(workspaceId),
+        roleApi.checkPermission(workspaceId, 'ASSIGN_ROLE')
+      ]);
+      if (rolesRes.success) setRoles(rolesRes.data);
+      if (membersRes.success) setMembers(membersRes.data);
+      if (permRes.success) setCanAssignRole(permRes.data.allowed);
+      setPendingChanges({});
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    fetchData();
+  }, [workspaceId]);
+
+  const handleRoleSelect = (userId, roleName) => {
+    setPendingChanges((prev) => ({ ...prev, [userId]: roleName }));
+  };
+
+  const handleSave = async () => {
+    if (Object.keys(pendingChanges).length === 0) return;
+    setSaving(true);
+    try {
+      const promises = Object.entries(pendingChanges).map(([userId, roleName]) => {
+        const role = roles.find((r) => r.role_name === roleName);
+        if (!role) return Promise.resolve();
+        return roleApi.assignRole(workspaceId, userId, role.role_id);
+      });
+      await Promise.all(promises);
+      toast.success('Roles updated successfully!');
+      await fetchData();
+    } catch (err) {
+      toast.error('Failed to update roles: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hasPermission = (role, key) => {
+    const p = role.permissions || {};
+    return p['*'] === true || p[key] === true;
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  const btnClass = "px-8 py-3 bg-black text-white border border-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg flex items-center gap-3 active:scale-95";
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-end">
+    <div className="flex flex-col gap-8 w-full pb-12 overflow-x-hidden">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Dashboard &gt; Settings &gt; Roles & Permissions</p>
-          <h2 className="text-2xl font-semibold text-primary flex items-center gap-2">
-            <ShieldAlert size={24}/> Roles & Permissions
+          <p className="text-sm text-gray-800 uppercase font-black tracking-[0.2em] mb-1">AUTHORIZATION PROTOCOLS</p>
+          <h2 className="text-3xl font-black text-primary flex items-center gap-3">
+            <ShieldCheck size={28} /> Roles & Authority
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Define what each role can do and assign roles to workspace members.</p>
+          <p className="text-xs font-black text-gray-800 uppercase tracking-widest mt-2">OPERATIONAL ACCESS MATRICES</p>
         </div>
       </div>
 
-      {/* Non-Owner View Banner */}
-      <div className="bg-gray-50 border border-border p-4 rounded-xl flex items-center justify-between gap-4 shadow-inner">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/5 text-primary flex items-center justify-center">
-            👁️
+      <div className="bg-white border border-border p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm hover:shadow-lg transition-all">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center shadow-lg shrink-0">
+            <Key size={20} />
           </div>
-          <p className="text-xs font-bold text-primary uppercase tracking-wider">
-            View Only <span className="font-medium text-gray-500 normal-case ml-2">— You can view but not edit role assignments.</span>
-          </p>
+          <div>
+            <p className="text-xs font-black text-primary uppercase tracking-widest">
+              Authority Status: <span className={canAssignRole ? 'text-green-600' : 'text-red-500'}>
+                {canAssignRole ? 'ADMINISTRATIVE PRIVILEGE' : 'RESTRICTED VIEW'}
+              </span>
+            </p>
+            <p className="text-xs text-gray-800 font-black uppercase mt-1">Operational roles are managed by leads.</p>
+          </div>
         </div>
-        <span className="text-[9px] font-extrabold tracking-widest bg-gray-400 text-white px-2.5 py-1 rounded shadow-sm">NON-OWNER STATE</span>
+        <span className="text-xs font-black bg-surface-alt border border-border text-primary px-4 py-2 rounded-xl uppercase tracking-widest shrink-0">
+          {roles.length} ROLES DEFINED
+        </span>
       </div>
 
       {/* Permission Matrix */}
-      <div className="bg-surface rounded-xl shadow-sm border border-border flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-border bg-gray-50/50 flex items-center justify-between">
-          <h3 className="text-xs font-extrabold uppercase tracking-widest text-primary">
-            Permission Matrix
-          </h3>
-          <span className="text-[10px] text-gray-400 font-bold uppercase italic">Read-only reference</span>
+      <div className="bg-white rounded-2xl border border-border shadow-xl flex flex-col overflow-hidden">
+        <div className="p-6 border-b border-border bg-gray-50/50 flex items-center justify-between shrink-0">
+          <h3 className="text-sm font-black uppercase tracking-[0.3em] text-primary">Access Matrix</h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-center border-collapse min-w-[900px]">
+        <div className="overflow-x-auto w-full custom-scrollbar">
+          <table className="w-full text-center border-collapse min-w-[1000px]">
             <thead>
-              <tr className="border-b border-border text-[10px] uppercase tracking-widest text-gray-500 bg-gray-50/30 font-extrabold">
-                <th className="p-4 text-left w-48">Role</th>
-                {headers.map((header, idx) => (
-                  <th key={idx} className="p-4 text-center font-bold leading-snug max-w-[100px]">{header}</th>
+              <tr className="border-b border-border text-xs uppercase tracking-[0.2em] text-gray-800 bg-white font-black">
+                <th className="p-6 text-left w-56">DESIGNATION</th>
+                {PERMISSION_KEYS.map((h) => (
+                  <th key={h.key} className="p-4 text-center font-black leading-tight max-w-[110px]">{h.label}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {permissions.map((row, rIdx) => (
-                <tr key={rIdx} className="border-b border-border hover:bg-gray-50/30 transition-colors">
-                  <td className="p-4 text-left font-bold text-sm text-primary flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center text-xs">
-                      {rIdx === 0 ? '👑' : rIdx === 1 ? '💼' : '👤'}
+            <tbody className="divide-y divide-border">
+              {roles.map((role) => (
+                <tr key={role.role_id} className="hover:bg-gray-50/80 transition-all group">
+                  <td className="p-6 text-left">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center shadow-sm shrink-0 group-hover:border-primary group-hover:shadow-md transition-all">
+                        {ROLE_EMOJIS[role.role_name] || '🏷️'}
+                      </div>
+                      <span className="text-sm font-black text-primary uppercase tracking-tight group-hover:translate-x-1 transition-transform">{role.role_name}</span>
                     </div>
-                    {row.role}
                   </td>
-                  {row.permissions.map((perm, pIdx) => (
-                    <td key={pIdx} className="p-4 text-center">
-                      {perm === true ? (
-                        <div className="mx-auto w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center shadow-inner">
-                          <Check size={14} strokeWidth={3} />
-                        </div>
-                      ) : perm === false ? (
-                        <div className="mx-auto w-6 h-6 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center shadow-inner">
-                          <X size={14} strokeWidth={3} />
+                  {PERMISSION_KEYS.map((h) => (
+                    <td key={h.key} className="p-4">
+                      {hasPermission(role, h.key) ? (
+                        <div className="mx-auto w-8 h-8 rounded-lg bg-green-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                          <Check size={16} strokeWidth={4} />
                         </div>
                       ) : (
-                        <div className="mx-auto text-[10px] font-bold text-gray-500 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-1 shadow-sm">
-                          {perm}
+                        <div className="mx-auto w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                          <X size={16} strokeWidth={4} />
                         </div>
                       )}
                     </td>
@@ -95,81 +166,90 @@ const RolesAndPermissions = () => {
         </div>
       </div>
 
-      {/* Assign Roles Section */}
-      <div className="bg-surface rounded-xl shadow-sm border border-border flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-border bg-gray-50/50 flex items-center justify-between">
-          <h3 className="text-xs font-extrabold uppercase tracking-widest text-primary flex items-center gap-2">
-            <Users size={14}/> Assign Roles to Members
+      {/* Role Assignment */}
+      <div className="bg-white rounded-2xl border border-border shadow-xl flex flex-col overflow-hidden">
+        <div className="p-6 border-b border-border bg-gray-50/50 flex items-center justify-between shrink-0">
+          <h3 className="text-sm font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+            <Users size={20} /> Authorization Control
           </h3>
-          <span className="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded shadow-sm">5 Members</span>
+          <span className="text-xs font-black bg-white border border-border px-3 py-1 rounded-lg uppercase tracking-widest">{members.length} UNITS</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
+        <div className="overflow-x-auto w-full custom-scrollbar">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="border-b border-border text-[10px] uppercase tracking-widest text-gray-400 bg-gray-50/30 font-extrabold">
-                <th className="p-4 w-12 text-center">#</th>
-                <th className="p-4">Member Name</th>
-                <th className="p-4">Current Role</th>
-                <th className="p-4">Change Role</th>
-                <th className="p-4 text-right">Status</th>
+              <tr className="border-b border-border text-xs uppercase tracking-[0.2em] text-gray-800 bg-white font-black">
+                <th className="p-6 w-20 text-center">ID</th>
+                <th className="p-6">Member Identity</th>
+                <th className="p-6">Current Role</th>
+                <th className="p-6">Reassign To</th>
+                <th className="p-6 text-right">Join Date</th>
               </tr>
             </thead>
-            <tbody>
-              {members.map((member, idx) => (
-                <tr key={idx} className="border-b border-border hover:bg-gray-50/30 transition-colors">
-                  <td className="p-4 text-center font-mono text-xs text-gray-400">{idx === 0 ? '01' : '05'}</td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img src={`https://ui-avatars.com/api/?name=${member.name}&background=random`} alt={member.name} className="w-8 h-8 rounded-full border shadow-inner" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-primary">{member.name}</p>
-                          {member.isUser && (
-                            <span className="text-[9px] font-extrabold bg-primary text-white px-1.5 py-0.5 rounded shadow-sm tracking-wide">YOU</span>
-                          )}
+            <tbody className="divide-y divide-border">
+              {members.map((member, idx) => {
+                const currentRole = pendingChanges[member.user_id] || member.role_name;
+                return (
+                  <tr key={member.user_id} className="hover:bg-gray-50/80 transition-all group">
+                    <td className="p-6 text-center font-black text-xs text-gray-400 group-hover:text-primary">#{String(idx + 1).padStart(2, '0')}</td>
+                    <td className="p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-xs font-black text-primary shadow-sm shrink-0 group-hover:border-primary group-hover:shadow-md transition-all">
+                          {(member.user_id || 'U').substring(0, 2).toUpperCase()}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5 font-medium">{member.email}</p>
+                        <div>
+                          <p className="text-sm font-black text-primary uppercase tracking-tight group-hover:translate-x-1 transition-transform">{member.email || 'Unknown Entity'}</p>
+                          <p className="text-xs text-gray-800 font-black uppercase tracking-widest mt-1">UID: {member.user_id.slice(0, 12)}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded shadow-sm uppercase ${member.isUser ? 'bg-primary text-white' : 'bg-gray-100 text-primary'}`}>
-                      {member.role}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    {member.isUser ? (
-                      <input type="text" disabled placeholder="Cannot change Owner role" className="text-xs font-medium text-gray-400 bg-gray-50 border border-gray-200 p-2 rounded-lg w-56 cursor-not-allowed shadow-inner select-none" />
-                    ) : (
-                      <select className="text-xs font-bold text-primary bg-white border border-gray-300 p-2 rounded-lg w-56 shadow-sm focus:outline-none cursor-pointer">
-                        <option>Team Member</option>
-                        <option>Project Manager</option>
-                      </select>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded shadow-sm uppercase ${member.isUser ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      {member.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-6">
+                      <span className={`text-xs font-black tracking-[0.2em] px-3 py-1.5 rounded-lg border border-transparent uppercase transition-all ${currentRole === 'ADMIN' ? 'bg-black text-white shadow-md group-hover:bg-white group-hover:text-black group-hover:border-black' : 'bg-surface-alt text-primary group-hover:bg-white group-hover:border-border'}`}>
+                        {currentRole || 'MEMBER'}
+                      </span>
+                    </td>
+                    <td className="p-6">
+                      {member.role_name === 'ADMIN' || !canAssignRole ? (
+                        <div className="bg-gray-100 border border-border p-3 rounded-xl text-xs font-black text-gray-400 uppercase tracking-widest w-64 shadow-inner">
+                          ACCESS RESTRICTED
+                        </div>
+                      ) : (
+                        <select
+                          value={currentRole || 'MEMBER'}
+                          onChange={(e) => handleRoleSelect(member.user_id, e.target.value)}
+                          className="text-xs font-black text-primary bg-white border border-border p-3 rounded-xl w-64 shadow-sm focus:outline-none cursor-pointer uppercase tracking-widest hover:border-black transition-all"
+                        >
+                          {roles.map((r) => (
+                            <option key={r.role_id} value={r.role_name}>{r.role_name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                    <td className="p-6 text-right text-xs font-black text-gray-800 uppercase tracking-widest whitespace-nowrap">
+                      {new Date(member.joined_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        
-        <div className="p-4 bg-gray-50/50 border-t border-border flex justify-end items-center gap-3">
-          <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1 mr-auto">
-             🔒 Only the Project Owner can save changes.
-          </span>
-          <button className="px-4 py-2 bg-white border border-gray-300 text-primary rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm transition-all cursor-pointer">
-            Discard
-          </button>
-          <button className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-opacity-90 shadow-sm flex items-center gap-2 transition-all cursor-pointer">
-            <Save size={14}/> Save Changes
-          </button>
-        </div>
+
+        {canAssignRole && (
+          <div className="p-8 bg-gray-50/50 border-t border-border flex flex-col sm:flex-row justify-end items-center gap-6">
+            <span className="text-xs font-black text-gray-800 uppercase tracking-[0.2em] mr-auto italic text-center sm:text-left">
+              * Commit authorization updates to persist.
+            </span>
+            <div className="flex gap-4 w-full sm:w-auto">
+              <button onClick={() => setPendingChanges({})} className={btnClass}>
+                Discard
+              </button>
+              <button onClick={handleSave} disabled={saving || Object.keys(pendingChanges).length === 0} className={btnClass}>
+                {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} {saving ? 'COMMITTING...' : 'Commit Changes'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

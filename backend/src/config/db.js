@@ -13,12 +13,12 @@ const pool = new Pool({
 });
 
 pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
+  console.log('[Database] Connected successfully to Supabase');
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected database error:', err);
-  process.exit(-1);
+  console.error('[Database] Unexpected error on idle client:', err.message);
+  // Do NOT exit here, let the server try to recover or stay up for other routes
 });
 
 module.exports = pool;

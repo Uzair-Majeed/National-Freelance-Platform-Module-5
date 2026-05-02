@@ -1,24 +1,39 @@
 const express = require('express');
 const router = express.Router();
-const workspaceController = require('../controllers/workspace.controller');
+const ctrl = require('../controllers/workspace.controller');
 
-// POST   /api/workspaces               - Create a new workspace
-router.post('/', workspaceController.createWorkspace);
-// GET    /api/workspaces/:workspaceId        - Get workspace by ID
-router.get('/:workspaceId', workspaceController.getWorkspaceById);
-// DELETE /api/workspaces/:workspaceId        - Soft-delete a workspace
-router.delete('/:workspaceId', workspaceController.deleteWorkspace);
-// PATCH  /api/workspaces/:workspaceId        - Update workspace details
-router.patch('/:workspaceId', workspaceController.updateWorkspace);
-// GET    /api/workspaces/project/:projectId - Get all workspaces in a project
-router.get('/project/:projectId', workspaceController.getWorkspacesByProject);
-// POST   /api/workspaces/:workspaceId/members     - Add member to workspace
-router.post('/:workspaceId/members', workspaceController.addMember);
-// GET    /api/workspaces/:workspaceId/members     - Get all members
-router.get('/:workspaceId/members', workspaceController.getWorkspaceMembers);
-// DELETE /api/workspaces/:workspaceId/members/:userId - Remove member from workspace
-router.delete('/:workspaceId/members/:userId', workspaceController.removeMember);
-// POST   /api/workspaces/:workspaceId/invite      - Invite user to workspace
-router.post('/:workspaceId/invite', workspaceController.inviteUser);
+// ── Invitation routes (must come BEFORE /:workspaceId to avoid route capture) ──
+// GET  /api/workspaces/invitation/:invitationId   – fetch invitation details
+router.get('/invitation/:invitationId', ctrl.getInvitationById);
+// PATCH /api/workspaces/invitation/:invitationId/respond – accept or decline
+router.patch('/invitation/:invitationId/respond', ctrl.respondToInvitation);
+
+// ── Project-scoped workspace list (must come before /:workspaceId) ────────────
+// GET  /api/workspaces/project/:projectId
+router.get('/project/:projectId', ctrl.getWorkspacesByProject);
+
+// ── Workspace CRUD ────────────────────────────────────────────────────────────
+// POST   /api/workspaces
+router.post('/', ctrl.createWorkspace);
+// GET    /api/workspaces/:workspaceId
+router.get('/:workspaceId', ctrl.getWorkspaceById);
+// DELETE /api/workspaces/:workspaceId
+router.delete('/:workspaceId', ctrl.deleteWorkspace);
+// PATCH  /api/workspaces/:workspaceId
+router.patch('/:workspaceId', ctrl.updateWorkspace);
+
+// ── Member management ─────────────────────────────────────────────────────────
+// POST   /api/workspaces/:workspaceId/members
+router.post('/:workspaceId/members', ctrl.addMember);
+// GET    /api/workspaces/:workspaceId/members
+router.get('/:workspaceId/members', ctrl.getWorkspaceMembers);
+// DELETE /api/workspaces/:workspaceId/members/:userId
+router.delete('/:workspaceId/members/:userId', ctrl.removeMember);
+
+// ── Invitations ───────────────────────────────────────────────────────────────
+// POST   /api/workspaces/:workspaceId/invite
+router.post('/:workspaceId/invite', ctrl.inviteUser);
+// GET    /api/workspaces/:workspaceId/invitations
+router.get('/:workspaceId/invitations', ctrl.getInvitations);
 
 module.exports = router;

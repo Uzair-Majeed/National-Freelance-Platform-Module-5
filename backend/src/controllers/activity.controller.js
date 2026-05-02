@@ -22,4 +22,14 @@ const generateWorkspaceReport = async (req, res) => {
   }
 };
 
-module.exports = { getActivityByWorkspace, generateWorkspaceReport };
+const getActivityByEntity = async (req, res) => {
+  try {
+    const { entityType, entityId } = req.params;
+    const logs = await activityService.getActivityByEntity(entityType, entityId);
+    res.status(200).json({ success: true, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getActivityByWorkspace, generateWorkspaceReport, getActivityByEntity };

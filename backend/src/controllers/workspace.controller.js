@@ -9,7 +9,7 @@ const workspaceService = require('../services/workspace.service');
 const createWorkspace = async (req, res) => {
   try {
     const { name, projectId } = req.body;
-    const createdBy = req.user?.userId; // Set by auth middleware
+    const createdBy = req.user?.userId;
     const workspace = await workspaceService.createWorkspace(name, projectId, createdBy);
     res.status(201).json({ success: true, data: workspace });
   } catch (err) {
@@ -28,6 +28,36 @@ const inviteUser = async (req, res) => {
   }
 };
 
+const respondToInvitation = async (req, res) => {
+  try {
+    const { status } = req.body;           // 'ACCEPTED' | 'DECLINED'
+    const inviteeUserId = req.user?.userId;
+    const { invitationId } = req.params;
+    const result = await workspaceService.respondToInvitation(invitationId, status, inviteeUserId);
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+const getInvitationById = async (req, res) => {
+  try {
+    const invitation = await workspaceService.getInvitationById(req.params.invitationId);
+    res.status(200).json({ success: true, data: invitation });
+  } catch (err) {
+    res.status(404).json({ success: false, message: err.message });
+  }
+};
+
+const getInvitations = async (req, res) => {
+  try {
+    const invitations = await workspaceService.getInvitations(req.params.workspaceId);
+    res.status(200).json({ success: true, data: invitations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getWorkspaceById = async (req, res) => {
   try {
     const workspace = await workspaceService.getWorkspaceById(req.params.workspaceId);
@@ -39,7 +69,8 @@ const getWorkspaceById = async (req, res) => {
 
 const getWorkspacesByProject = async (req, res) => {
   try {
-    const workspaces = await workspaceService.getWorkspacesByProject(req.params.projectId);
+    const userId = req.user?.userId;
+    const workspaces = await workspaceService.getWorkspacesByProject(req.params.projectId, userId);
     res.status(200).json({ success: true, data: workspaces });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -96,4 +127,17 @@ const updateWorkspace = async (req, res) => {
   }
 };
 
-module.exports = { createWorkspace, inviteUser, getWorkspaceById, getWorkspacesByProject, addMember, removeMember, getWorkspaceMembers, deleteWorkspace, updateWorkspace };
+module.exports = {
+  createWorkspace,
+  inviteUser,
+  respondToInvitation,
+  getInvitationById,
+  getInvitations,
+  getWorkspaceById,
+  getWorkspacesByProject,
+  addMember,
+  removeMember,
+  getWorkspaceMembers,
+  deleteWorkspace,
+  updateWorkspace,
+};
