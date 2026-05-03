@@ -1,5 +1,5 @@
-# Use Node.js 18 Alpine as base image for a small footprint
-FROM node:18-alpine
+# Use Node.js 20 Alpine as base image for a small footprint
+FROM node:20-alpine
 
 # Set working directory inside the container
 WORKDIR /app
