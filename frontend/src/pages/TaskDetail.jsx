@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, CheckSquare, MessageSquare, Send, Loader2, AlertCircle, Paperclip, Download, Trash2, ShieldCheck, Activity, Edit3, Save, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { taskApi, fileApi, activityApi, workspaceApi } from '../api';
+import { taskApi, fileApi, activityApi, workspaceApi, roleApi } from '../api';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'UNDER_REVIEW', 'DONE'];
@@ -44,6 +44,7 @@ const TaskDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const [postingComment, setPostingComment] = useState(false);
+  const [permissions, setPermissions] = useState({ edit: false, delete: false });
 
   const fetchData = async () => {
     try {
@@ -65,6 +66,16 @@ const TaskDetail = () => {
         });
         const memRes = await workspaceApi.getMembers(taskRes.data.workspace_id);
         if (memRes.success) setMembers(memRes.data);
+
+        // Check Permissions for Edit/Delete
+        const [editPerm, deletePerm] = await Promise.all([
+          roleApi.checkPermission(taskRes.data.workspace_id, 'EDIT_TASK'),
+          roleApi.checkPermission(taskRes.data.workspace_id, 'DELETE_TASK')
+        ]);
+        setPermissions({
+          edit: editPerm.success ? editPerm.data.allowed : false,
+          delete: deletePerm.success ? deletePerm.data.allowed : false
+        });
       }
       
       if (fileRes.success) setFiles(fileRes.data);
@@ -73,6 +84,8 @@ const TaskDetail = () => {
         const commentLogs = activityRes.data.filter(log => log.action_type === 'COMMENT');
         setComments(commentLogs);
       }
+
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -110,6 +123,17 @@ const TaskDetail = () => {
         assigned_to: editedTask.assigned_to || null
       });
       if (res.success) {
+        if (attachedFile) {
+          const formData = new FormData();
+          formData.append('file', attachedFile);
+          formData.append('workspaceId', task.workspace_id);
+          formData.append('taskId', taskId);
+          await fileApi.upload(formData);
+          setAttachedFile(null);
+          // Refresh files list
+          const fileRes = await fileApi.getByTask(taskId);
+          if (fileRes.success) setFiles(fileRes.data);
+        }
         setTask(res.data);
         setIsEditing(false);
         toast.success('Task updated successfully');
@@ -212,12 +236,12 @@ const TaskDetail = () => {
         </button>
 
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          {isCreator && !isEditing && (
+          {(isCreator || permissions.edit) && !isEditing && (
             <button onClick={() => setIsEditing(true)} className={btnClass + " w-full sm:w-auto"}>
               <Edit3 size={16} /> Edit Operational Unit
             </button>
           )}
-          {isCreator && (
+          {(isCreator || permissions.delete) && (
             <button onClick={handleDeleteTask} disabled={deleting} className={redBtn + " w-full sm:w-auto"}>
               {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               Terminate Task
@@ -252,6 +276,30 @@ const TaskDetail = () => {
                     <option value="MEDIUM">MEDIUM PRIORITY</option>
                     <option value="LOW">LOW PRIORITY</option>
                   </select>
+
+                  <select
+                    value={editedTask.assigned_to}
+                    onChange={(e) => setEditedTask({ ...editedTask, assigned_to: e.target.value })}
+                    className="text-xs font-black tracking-widest border border-border rounded-xl px-4 py-2 uppercase bg-white cursor-pointer"
+                  >
+                    <option value="">UNASSIGNED</option>
+                    {members.map(m => (
+                      <option key={m.user_id} value={m.user_id}>{m.email.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* File Attachment in Edit Mode */}
+                <div className="flex flex-col gap-3 mt-4">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ATTACH NEW ASSET</label>
+                  <input
+                    type="file"
+                    onChange={(e) => setAttachedFile(e.target.files[0])}
+                    className="w-full text-[10px] font-black uppercase tracking-widest text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-none file:text-[10px] file:font-black file:uppercase file:bg-black file:text-white hover:file:bg-opacity-90 transition-all border border-border rounded-xl bg-gray-50 p-2 cursor-pointer"
+                  />
+                  {attachedFile && (
+                    <p className="text-[10px] font-black text-primary uppercase">Staged: {attachedFile.name}</p>
+                  )}
                 </div>
               </div>
             ) : (

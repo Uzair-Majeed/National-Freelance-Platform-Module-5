@@ -64,7 +64,7 @@ const RolesAndPermissions = () => {
       const promises = Object.entries(pendingChanges).map(([userId, roleName]) => {
         const role = roles.find((r) => r.role_name === roleName);
         if (!role) return Promise.resolve();
-        return roleApi.assignRole(workspaceId, userId, role.role_id);
+        return roleApi.assignRole(workspaceId, userId, role.id);
       });
       await Promise.all(promises);
       toast.success('Roles updated successfully!');
@@ -137,7 +137,7 @@ const RolesAndPermissions = () => {
             </thead>
             <tbody className="divide-y divide-border">
               {roles.map((role) => (
-                <tr key={role.role_id} className="hover:bg-gray-50/80 transition-all group">
+                <tr key={role.id} className="hover:bg-gray-50/80 transition-all group">
                   <td className="p-6 text-left">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center shadow-sm shrink-0 group-hover:border-primary group-hover:shadow-md transition-all">
@@ -220,7 +220,7 @@ const RolesAndPermissions = () => {
                           className="text-xs font-black text-primary bg-white border border-border p-3 rounded-xl w-64 shadow-sm focus:outline-none cursor-pointer uppercase tracking-widest hover:border-black transition-all"
                         >
                           {roles.map((r) => (
-                            <option key={r.role_id} value={r.role_name}>{r.role_name}</option>
+                            <option key={r.id} value={r.role_name}>{r.role_name}</option>
                           ))}
                         </select>
                       )}

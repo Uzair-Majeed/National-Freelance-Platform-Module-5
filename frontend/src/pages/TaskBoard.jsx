@@ -56,7 +56,7 @@ const TaskBoard = () => {
     return <LoadingSpinner />;
   }
 
-  const done  = tasks.filter(t => t.status === 'DONE').length;
+  const done  = tasks.filter(t => t.status?.toUpperCase() === 'DONE').length;
   const pct   = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
 
   const btnClass = "flex items-center gap-2 px-6 py-3 bg-black text-white border border-black rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg active:scale-95";
