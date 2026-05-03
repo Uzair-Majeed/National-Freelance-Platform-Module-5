@@ -118,12 +118,12 @@ const TaskBoard = () => {
                   <Link
                     to={`/tasks/${task.id}`}
                     key={task.id}
-                    className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[170px] group border-l-8 ${PRIORITY_CARD_STYLES[task.priority] || 'bg-white border-border'}`}
+                    className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[170px] group border-l-8 ${PRIORITY_CARD_STYLES[task.priority?.toUpperCase()] || 'bg-white border-border'}`}
                   >
                     <div>
                       <div className="flex justify-between items-start mb-3">
-                        <span className={`text-[10px] font-black tracking-[0.2em] px-2 py-0.5 rounded uppercase shadow-sm ${PRIORITY_BADGE_STYLES[task.priority] || 'bg-gray-600 text-white'}`}>
-                          {task.priority || 'MEDIUM'}
+                        <span className={`text-[10px] font-black tracking-[0.2em] px-2 py-0.5 rounded uppercase shadow-sm ${PRIORITY_BADGE_STYLES[task.priority?.toUpperCase()] || PRIORITY_BADGE_STYLES.MEDIUM}`}>
+                          {task.priority?.toUpperCase() === 'MEDIUM' ? 'STANDARD' : (task.priority || 'STANDARD')}
                         </span>
                         <button className="text-gray-400 hover:text-primary transition-colors" onClick={e => e.preventDefault()}>
                           <MoreHorizontal size={18} />

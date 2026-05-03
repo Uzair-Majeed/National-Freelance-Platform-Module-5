@@ -257,7 +257,7 @@ const TaskDetail = () => {
             ) : (
               <>
                 <span className={`text-xs font-black tracking-[0.2em] px-4 py-1.5 rounded-lg uppercase ${PRIORITY_STYLES[task.priority?.toUpperCase()] || PRIORITY_STYLES.MEDIUM}`}>
-                  {task.priority || 'MEDIUM'} PRIORITY UNIT
+                  {task.priority?.toUpperCase() === 'MEDIUM' ? 'STANDARD' : (task.priority || 'STANDARD')} PRIORITY UNIT
                 </span>
                 <h2 className="text-4xl font-black text-primary mt-6 leading-tight tracking-tighter uppercase group-hover:translate-x-1 transition-transform">
                   {task.title}
