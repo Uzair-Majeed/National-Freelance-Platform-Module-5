@@ -1,5 +1,5 @@
 const multer = require('multer');
-const { saveImage, getImage, saveChatFile, getChatFile } = require('../repositories/sqlite.repository');
+const { uploadToStorage, downloadFromStorage } = require('../repositories/storage.repository');
 const fileRepository = require('../repositories/file.repository');
 const activityService = require('../services/activity.service');
 
@@ -15,21 +15,12 @@ const uploadFile = async (req, res) => {
     const { workspaceId, taskId, isChat } = req.body;
     const userId = req.user?.userId;
 
-    // 1. Save binary to SQLite (Choose table based on context)
-    let sqliteResult;
-    if (isChat === 'true') {
-      sqliteResult = await saveChatFile(
-        req.file.originalname,
-        req.file.mimetype,
-        req.file.buffer
-      );
-    } else {
-      sqliteResult = await saveImage(
-        req.file.originalname,
-        req.file.mimetype,
-        req.file.buffer
-      );
-    }
+    // 1. Save binary to Supabase Storage
+    const storageResult = await uploadToStorage(
+      req.file.originalname,
+      req.file.mimetype,
+      req.file.buffer
+    );
 
     // 2. Save metadata to PostgreSQL (Supabase)
     const fileMetadata = await fileRepository.create({
@@ -37,7 +28,7 @@ const uploadFile = async (req, res) => {
       task_id: taskId || null,
       uploaded_by: userId,
       file_name: req.file.originalname,
-      file_path: sqliteResult.id, // Store SQLite ID as path
+      file_path: storageResult.id, // Store Storage ID as path
       mime_type: req.file.mimetype,
       file_size_bytes: req.file.size
     });
@@ -70,21 +61,15 @@ const downloadFile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
 
-    // Try both tables or use a flag. For simplicity, we'll try chat_files first then images.
-    let sqliteRow = await getChatFile(fileMetadata.file_path);
-    if (!sqliteRow) {
-      sqliteRow = await getImage(fileMetadata.file_path);
+    try {
+      const buffer = await downloadFromStorage(fileMetadata.file_path);
+      res.setHeader('Content-Type', fileMetadata.mime_type);
+      res.setHeader('Content-Disposition', `attachment; filename="${fileMetadata.file_name}"`);
+      res.send(buffer);
+    } catch (storageError) {
+      console.error('[DownloadFile] Error fetching from storage:', storageError);
+      return res.status(404).json({ success: false, message: 'Binary data not found in storage' });
     }
-
-    if (!sqliteRow) {
-      return res.status(404).json({ success: false, message: 'Binary data not found in local DB' });
-    }
-
-    res.setHeader('Content-Type', sqliteRow.mime_type);
-    res.setHeader('Content-Disposition', `attachment; filename="${sqliteRow.name}"`);
-    
-    const buffer = Buffer.isBuffer(sqliteRow.data) ? sqliteRow.data : Buffer.from(sqliteRow.data);
-    res.send(buffer);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
