@@ -7,24 +7,24 @@ const pool = require('../config/db');
 
 const create = async ({ name, project_id, created_by }) => {
   const result = await pool.query(
-    'INSERT INTO workspace_list (name, project_id, created_by) VALUES ($1, $2, $3) RETURNING *',
+    'INSERT INTO workspaces (name, project_id, created_by) VALUES ($1, $2, $3) RETURNING *',
     [name, project_id, created_by]
   );
   return result.rows[0];
 };
 
-const findById = async (workspaceId) => {
+const findById = async (id) => {
   const result = await pool.query(
-    'SELECT * FROM workspace_list WHERE workspace_id = $1::uuid AND deleted_at IS NULL AND is_active = TRUE',
-    [workspaceId]
+    'SELECT * FROM workspaces WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE',
+    [id]
   );
   return result.rows[0] || null;
 };
 
 const findByProject = async (projectId, userId) => {
   const result = await pool.query(
-    `SELECT w.* FROM workspace_list w
-     JOIN workspace_members wm ON w.workspace_id = wm.workspace_id
+    `SELECT w.* FROM workspaces w
+     JOIN workspace_members wm ON w.id = wm.workspace_id
      WHERE w.project_id = $1 
      AND wm.user_id = $2
      AND w.deleted_at IS NULL 
@@ -52,10 +52,10 @@ const removeMember = async (workspaceId, userId) => {
 
 const getMembers = async (workspaceId) => {
   const result = await pool.query(
-    `SELECT wm.*, r.role_name, u.email 
+    `SELECT wm.*, r.role_name, u.email, u.display_name
      FROM workspace_members wm
-     JOIN workspace_users u ON wm.user_id = u.user_id
-     LEFT JOIN workspace_roles r ON wm.role_id = r.role_id
+     LEFT JOIN workspace_roles r ON wm.role_id = r.id
+     JOIN users u ON wm.user_id = u.id
      WHERE wm.workspace_id = $1`,
     [workspaceId]
   );
@@ -72,7 +72,11 @@ const createInvitation = async (workspaceId, invitedBy, inviteeEmail) => {
 
 const findInvitation = async (invitationId) => {
   const result = await pool.query(
-    'SELECT * FROM workspace_invitations WHERE invitation_id = $1',
+    `SELECT i.*, w.name as workspace_name, u.email as inviter_email
+     FROM workspace_invitations i
+     JOIN workspaces w ON i.workspace_id = w.id
+     JOIN users u ON i.invited_by = u.id
+     WHERE i.id = $1`,
     [invitationId]
   );
   return result.rows[0] || null;
@@ -80,23 +84,23 @@ const findInvitation = async (invitationId) => {
 
 const updateInvitationStatus = async (invitationId, status, inviteeUserId) => {
   const result = await pool.query(
-    'UPDATE workspace_invitations SET status = $2, invitee_user_id = $3, responded_at = CURRENT_TIMESTAMP WHERE invitation_id = $1 RETURNING *',
+    'UPDATE workspace_invitations SET status = $2, invitee_user_id = $3, responded_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
     [invitationId, status, inviteeUserId]
   );
   return result.rows[0];
 }
 
-const softDelete = async (workspaceId) => {
+const softDelete = async (id) => {
   await pool.query(
-    'UPDATE workspace_list SET deleted_at = CURRENT_TIMESTAMP, is_active = FALSE WHERE workspace_id = $1',
-    [workspaceId]
+    'UPDATE workspaces SET deleted_at = CURRENT_TIMESTAMP, is_active = FALSE WHERE id = $1',
+    [id]
   );
 };
 
-const update = async (workspaceId, { name, is_active }) => {
+const update = async (id, { name, is_active }) => {
   const result = await pool.query(
-    'UPDATE workspace_list SET name = COALESCE($2, name), is_active = COALESCE($3, is_active), updated_at = CURRENT_TIMESTAMP WHERE workspace_id = $1 RETURNING *',
-    [workspaceId, name, is_active]
+    'UPDATE workspaces SET name = COALESCE($2, name), is_active = COALESCE($3, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+    [id, name, is_active]
   );
   return result.rows[0];
 };
@@ -109,5 +113,31 @@ const findInvitationsByWorkspace = async (workspaceId) => {
   return result.rows;
 };
 
-module.exports = { create, findById, findByProject, addMember, removeMember, getMembers, createInvitation, findInvitation, findInvitationsByWorkspace, updateInvitationStatus, softDelete, update };
+const findInvitationsByEmail = async (email) => {
+  const result = await pool.query(
+    `SELECT i.*, w.name as workspace_name 
+     FROM workspace_invitations i
+     JOIN workspaces w ON i.workspace_id = w.id
+     WHERE i.invitee_email = $1 AND i.status = 'pending'
+     ORDER BY i.invited_at DESC`,
+    [email]
+  );
+  return result.rows;
+};
+
+module.exports = { 
+  create, 
+  findById, 
+  findByProject, 
+  addMember, 
+  removeMember, 
+  getMembers, 
+  createInvitation, 
+  findInvitation, 
+  findInvitationsByWorkspace, 
+  findInvitationsByEmail, 
+  updateInvitationStatus, 
+  softDelete, 
+  update 
+};
 

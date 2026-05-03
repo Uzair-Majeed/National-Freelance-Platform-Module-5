@@ -3,19 +3,19 @@ import { User, ChevronDown, Check, LogOut } from 'lucide-react';
 
 const MOCK_USERS = [
   {
-    id: '550e8400-e29b-41d4-a716-446655440000',
+    id: '1',
     email: 'uzairmjd886@gmail.com',
     name: 'Uzair (Admin)',
     role: 'ADMIN'
   },
   {
-    id: '25850b6a-dab9-418f-8e62-638fdf07b53b',
+    id: '2',
     email: 'i233063@isb.nu.edu.pk',
     name: 'Member 1',
     role: 'MEMBER'
   },
   {
-    id: '6d5730ee-f2e7-4101-983b-e9f95fe0330e',
+    id: '3',
     email: 'narrator886@gmail.com',
     name: 'Member 2',
     role: 'MEMBER'
@@ -25,7 +25,7 @@ const MOCK_USERS = [
 const UserSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
   const activeUserId = localStorage.getItem('activeUserId') || MOCK_USERS[0].id;
-  const activeUser = MOCK_USERS.find(u => u.id === activeUserId) || MOCK_USERS[0];
+  const activeUser = MOCK_USERS.find(u => String(u.id) === String(activeUserId)) || MOCK_USERS[0];
 
   const handleSwitch = (userId) => {
     localStorage.setItem('activeUserId', userId);

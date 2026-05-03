@@ -17,7 +17,7 @@ const getUserColor = (userId) => {
     'text-violet-900 bg-violet-100 border-violet-300',
   ];
   if (!userId) return colors[0];
-  const index = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+  const index = String(userId).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
   return colors[index];
 };
 
@@ -141,7 +141,7 @@ const WorkspaceChat = () => {
       const res = await fileApi.upload(formData);
       if (res.success) {
         toast.success('Asset Shared');
-        await handleSend(null, `Shared a file: ${file.name}`, res.data.file_id);
+        await handleSend(null, `Shared a file: ${file.name}`, res.data.id);
       }
     } catch (err) {
       toast.error(`Upload Failed: ${err.message}`);
@@ -227,7 +227,7 @@ const WorkspaceChat = () => {
                 const userTheme = getUserColor(msg.sender_id);
                 const displayName = msg.sender_name?.split('@')[0] || 'User';
                 const isImage = msg.mime_type?.startsWith('image/');
-                const fileUrl = fileApi.getDownloadUrl(msg.media_id);
+                const fileUrl = fileApi.getMediaUrl(msg.media_id);
                 const isEdited = msg.is_edited;
                 
                 return (

@@ -13,8 +13,8 @@ const create = async ({ workspace_id, role_name, permissions }) => {
   return result.rows[0];
 };
 
-const findById = async (roleId) => {
-  const result = await pool.query('SELECT * FROM workspace_roles WHERE role_id = $1', [roleId]);
+const findById = async (id) => {
+  const result = await pool.query('SELECT * FROM workspace_roles WHERE id = $1', [id]);
   return result.rows[0] || null;
 };
 
@@ -29,7 +29,7 @@ const findByWorkspace = async (workspaceId) => {
 const getMemberRole = async (userId, workspaceId) => {
   const result = await pool.query(
     `SELECT r.* FROM workspace_roles r
-     JOIN workspace_members wm ON wm.role_id = r.role_id
+     JOIN workspace_members wm ON wm.role_id = r.id
      WHERE wm.user_id = $1 AND wm.workspace_id = $2`,
     [userId, workspaceId]
   );

@@ -154,7 +154,7 @@ const TeamManagement = () => {
                       </div>
                       <div>
                         <p className="text-sm font-black text-primary uppercase tracking-tight group-hover:translate-x-1 transition-transform">{m.email}</p>
-                        <p className="text-xs text-gray-800 font-black uppercase tracking-widest mt-1">UID: {m.user_id.slice(0, 12)}</p>
+                        <p className="text-xs text-gray-800 font-black uppercase tracking-widest mt-1">UID: {m.user_id}</p>
                       </div>
                     </div>
                   </td>
@@ -201,7 +201,7 @@ const TeamManagement = () => {
               {invitations.length > 0 ? invitations.map((inv, i) => {
                 const style = INVITE_STATUS_STYLES[inv.status] || INVITE_STATUS_STYLES.PENDING;
                 return (
-                  <tr key={inv.invitation_id} className="hover:bg-gray-50/80 transition-all">
+                  <tr key={inv.id} className="hover:bg-gray-50/80 transition-all">
                     <td className="p-6 text-center font-black text-xs text-gray-400">#{String(i + 1).padStart(2, '0')}</td>
                     <td className="p-6 text-xs font-black text-primary uppercase tracking-widest">{inv.invitee_email}</td>
                     <td className="p-6">

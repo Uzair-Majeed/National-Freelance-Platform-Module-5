@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, CheckSquare, MessageSquare, Send, Loader2, AlertCircle, Paperclip, Download, Trash2, ShieldCheck, Activity, Edit3, Save, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { taskApi, fileApi, activityApi, workspaceApi } from '../api';
+import { taskApi, fileApi, activityApi, workspaceApi, roleApi } from '../api';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'UNDER_REVIEW', 'DONE'];
@@ -44,6 +44,7 @@ const TaskDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const [postingComment, setPostingComment] = useState(false);
+  const [permissions, setPermissions] = useState({ edit: false, delete: false });
 
   const fetchData = async () => {
     try {
@@ -65,6 +66,16 @@ const TaskDetail = () => {
         });
         const memRes = await workspaceApi.getMembers(taskRes.data.workspace_id);
         if (memRes.success) setMembers(memRes.data);
+
+        // Check Permissions for Edit/Delete
+        const [editPerm, deletePerm] = await Promise.all([
+          roleApi.checkPermission(taskRes.data.workspace_id, 'EDIT_TASK'),
+          roleApi.checkPermission(taskRes.data.workspace_id, 'DELETE_TASK')
+        ]);
+        setPermissions({
+          edit: editPerm.success ? editPerm.data.allowed : false,
+          delete: deletePerm.success ? deletePerm.data.allowed : false
+        });
       }
       
       if (fileRes.success) setFiles(fileRes.data);
@@ -73,6 +84,8 @@ const TaskDetail = () => {
         const commentLogs = activityRes.data.filter(log => log.action_type === 'COMMENT');
         setComments(commentLogs);
       }
+
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -110,6 +123,17 @@ const TaskDetail = () => {
         assigned_to: editedTask.assigned_to || null
       });
       if (res.success) {
+        if (attachedFile) {
+          const formData = new FormData();
+          formData.append('file', attachedFile);
+          formData.append('workspaceId', task.workspace_id);
+          formData.append('taskId', taskId);
+          await fileApi.upload(formData);
+          setAttachedFile(null);
+          // Refresh files list
+          const fileRes = await fileApi.getByTask(taskId);
+          if (fileRes.success) setFiles(fileRes.data);
+        }
         setTask(res.data);
         setIsEditing(false);
         toast.success('Task updated successfully');
@@ -151,7 +175,7 @@ const TaskDetail = () => {
         formData.append('taskId', taskId);
         const fileRes = await fileApi.upload(formData);
         if (fileRes.success) {
-          fileId = fileRes.data.file_id;
+          fileId = fileRes.data.id;
           fileName = fileRes.data.file_name;
         }
       }
@@ -175,8 +199,11 @@ const TaskDetail = () => {
 
   const getMemberEmail = (userId) => {
     if (!userId) return 'Unassigned';
+    // If the task object already has the joined email, use it
+    if (task.assigned_to === userId && task.assignee_email) return task.assignee_email;
+    
     const member = members.find((m) => m.user_id === userId);
-    return member ? member.email : `User ${userId.slice(0, 8)}`;
+    return member ? member.email : `ID: ${userId}`;
   };
 
   if (loading) {
@@ -209,12 +236,12 @@ const TaskDetail = () => {
         </button>
 
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          {isCreator && !isEditing && (
+          {(isCreator || permissions.edit) && !isEditing && (
             <button onClick={() => setIsEditing(true)} className={btnClass + " w-full sm:w-auto"}>
               <Edit3 size={16} /> Edit Operational Unit
             </button>
           )}
-          {isCreator && (
+          {(isCreator || permissions.delete) && (
             <button onClick={handleDeleteTask} disabled={deleting} className={redBtn + " w-full sm:w-auto"}>
               {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
               Terminate Task
@@ -249,12 +276,36 @@ const TaskDetail = () => {
                     <option value="MEDIUM">MEDIUM PRIORITY</option>
                     <option value="LOW">LOW PRIORITY</option>
                   </select>
+
+                  <select
+                    value={editedTask.assigned_to}
+                    onChange={(e) => setEditedTask({ ...editedTask, assigned_to: e.target.value })}
+                    className="text-xs font-black tracking-widest border border-border rounded-xl px-4 py-2 uppercase bg-white cursor-pointer"
+                  >
+                    <option value="">UNASSIGNED</option>
+                    {members.map(m => (
+                      <option key={m.user_id} value={m.user_id}>{m.email.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* File Attachment in Edit Mode */}
+                <div className="flex flex-col gap-3 mt-4">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">ATTACH NEW ASSET</label>
+                  <input
+                    type="file"
+                    onChange={(e) => setAttachedFile(e.target.files[0])}
+                    className="w-full text-[10px] font-black uppercase tracking-widest text-gray-800 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-none file:text-[10px] file:font-black file:uppercase file:bg-black file:text-white hover:file:bg-opacity-90 transition-all border border-border rounded-xl bg-gray-50 p-2 cursor-pointer"
+                  />
+                  {attachedFile && (
+                    <p className="text-[10px] font-black text-primary uppercase">Staged: {attachedFile.name}</p>
+                  )}
                 </div>
               </div>
             ) : (
               <>
-                <span className={`text-xs font-black tracking-[0.2em] px-4 py-1.5 rounded-lg uppercase ${PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.MEDIUM}`}>
-                  {task.priority || 'MEDIUM'} PRIORITY UNIT
+                <span className={`text-xs font-black tracking-[0.2em] px-4 py-1.5 rounded-lg uppercase ${PRIORITY_STYLES[task.priority?.toUpperCase()] || PRIORITY_STYLES.MEDIUM}`}>
+                  {task.priority?.toUpperCase() === 'MEDIUM' ? 'STANDARD' : (task.priority || 'STANDARD')} PRIORITY UNIT
                 </span>
                 <h2 className="text-4xl font-black text-primary mt-6 leading-tight tracking-tighter uppercase group-hover:translate-x-1 transition-transform">
                   {task.title}
@@ -265,10 +316,10 @@ const TaskDetail = () => {
 
           <div className="shrink-0 w-full md:w-auto">
             <select
-              value={task.status}
+              value={task.status?.toUpperCase()}
               onChange={(e) => handleStatusChange(e.target.value)}
               disabled={statusLoading}
-              className={`w-full text-xs font-black tracking-widest border border-border rounded-xl px-6 py-4 cursor-pointer focus:outline-none transition-all uppercase shadow-lg ${STATUS_STYLES[task.status] || STATUS_STYLES.TODO}`}
+              className={`w-full text-xs font-black tracking-widest border border-border rounded-xl px-6 py-4 cursor-pointer focus:outline-none transition-all uppercase shadow-lg ${STATUS_STYLES[task.status?.toUpperCase()] || STATUS_STYLES.TODO}`}
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>{s.replace('_', ' ')}</option>
@@ -342,7 +393,7 @@ const TaskDetail = () => {
             </div>
             <div>
               <p className="text-xs font-black text-gray-800 uppercase tracking-widest">Operational Status</p>
-              <p className="text-sm font-black text-primary uppercase">{task.status.replace('_', ' ')}</p>
+              <p className="text-sm font-black text-primary uppercase">{task.status?.replace('_', ' ')}</p>
             </div>
           </div>
         </div>
@@ -380,7 +431,7 @@ const TaskDetail = () => {
               </div>
             ) : (
               files.map(file => (
-                <div key={file.file_id} className="flex items-center gap-5 bg-white border border-border rounded-2xl px-6 py-4 shadow-sm hover:shadow-xl transition-all group min-w-[240px] w-full sm:w-auto">
+                <div key={file.id} className="flex items-center gap-5 bg-white border border-border rounded-2xl px-6 py-4 shadow-sm hover:shadow-xl transition-all group min-w-[240px] w-full sm:w-auto">
                   <div className="w-12 h-12 rounded-xl bg-gray-50 border border-border flex items-center justify-center text-primary group-hover:bg-black group-hover:text-white transition-all">
                     <Paperclip size={20} />
                   </div>
@@ -389,7 +440,7 @@ const TaskDetail = () => {
                     <p className="text-[10px] font-black text-gray-800 uppercase tracking-widest mt-0.5">{(file.file_size_bytes / 1024).toFixed(1)} KB</p>
                   </div>
                   <a 
-                    href={fileApi.getDownloadUrl(file.file_id)} 
+                    href={fileApi.getDownloadUrl(file.id)} 
                     target="_blank" rel="noreferrer"
                     className="p-4 bg-black text-white rounded-xl shadow-md hover:bg-white hover:text-black border border-black transition-all"
                   >
@@ -411,7 +462,7 @@ const TaskDetail = () => {
             {comments.map((c) => {
               const data = c.new_value || {};
               return (
-                <div key={c.log_id} className="flex gap-4 md:gap-6 items-start group">
+                <div key={c.id} className="flex gap-4 md:gap-6 items-start group">
                   <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white border border-border flex items-center justify-center text-xs font-black text-primary shadow-sm shrink-0">
                     {(c.actor_email || 'U').substring(0, 2).toUpperCase()}
                   </div>

@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const apiFetch = async (endpoint, options = {}) => {
-  const activeUserId = localStorage.getItem('activeUserId') || '550e8400-e29b-41d4-a716-446655440000';
+  const activeUserId = localStorage.getItem('activeUserId') || '1';
 
   const headers = {
     'Content-Type': 'application/json',
@@ -41,6 +41,7 @@ export const workspaceApi = {
     apiFetch(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' }),
   getInvitationById: (invitationId) => apiFetch(`/workspaces/invitation/${invitationId}`),
   getInvitations: (workspaceId) => apiFetch(`/workspaces/${workspaceId}/invitations`),
+  getMyInvitations: () => apiFetch('/workspaces/invitations/my'),
   respondToInvitation: (invitationId, status) =>
     apiFetch(`/workspaces/invitation/${invitationId}/respond`, {
       method: 'PATCH',
@@ -80,6 +81,7 @@ export const fileApi = {
   getByWorkspace: (workspaceId) => apiFetch(`/files/workspace/${workspaceId}`),
   getByTask: (taskId) => apiFetch(`/files/task/${taskId}`),
   getDownloadUrl: (fileId) => `${API_BASE_URL}/files/${fileId}/download`,
+  getMediaUrl: (mediaId) => `${API_BASE_URL}/files/media/${mediaId}`,
 };
 
 // ── Activity API ───────────────────────────────────────────────────────────────

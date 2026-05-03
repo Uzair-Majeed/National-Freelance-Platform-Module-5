@@ -9,25 +9,25 @@ const simulateSession = async (req, res) => {
 
     console.log(`[Auth] Attempting simulation for: ${email}`);
 
-    // Find or create user - Using workspace_users
-    let result = await pool.query('SELECT * FROM workspace_users WHERE email = $1', [email]);
+    // Find or create user - Using Centralized 'users' table
+    let result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     
     if (result.rows.length === 0) {
       console.log(`[Auth] User not found, creating new entry for: ${email}`);
-      // Create new user in workspace_users
+      // Create new user in centralized users table
       result = await pool.query(
-        'INSERT INTO workspace_users (email) VALUES ($1) RETURNING *',
-        [email]
+        'INSERT INTO users (email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4) RETURNING *',
+        [email, 'dummy_hash', email.split('@')[0], 'User']
       );
     }
 
     const user = result.rows[0];
-    console.log(`[Auth] Session established for user_id: ${user.user_id}`);
+    console.log(`[Auth] Session established for id: ${user.id}`);
     
     res.status(200).json({ 
       success: true, 
       data: { 
-        user_id: user.user_id, 
+        user_id: user.id, 
         email: user.email 
       } 
     });

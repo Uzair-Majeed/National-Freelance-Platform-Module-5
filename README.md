@@ -62,6 +62,33 @@ The project is architected as a decoupled Full-Stack application:
 
 ---
 
+## 🐳 Docker Deployment
+
+For a streamlined setup using Docker, follow these commands:
+
+### 1. Build and Start Containers
+This will build the images and start both frontend and backend services in the background.
+```bash
+docker compose up --build -d
+```
+
+### 2. View Logs
+To monitor the logs of both services:
+```bash
+docker compose logs -f
+```
+
+### 3. Stop Services
+```bash
+docker compose down
+```
+
+### 4. Access the Application
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:5000/api](http://localhost:5000/api)
+
+---
+
 ## 🛡️ Key Features
 
 - **Strategic Task Board**: Multi-stage Kanban system with priority matrix.

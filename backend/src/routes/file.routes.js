@@ -14,4 +14,7 @@ router.get('/task/:taskId', fileController.getTaskFiles);
 // Download/View a file
 router.get('/:fileId/download', fileController.downloadFile);
 
+// View chat media
+router.get('/media/:mediaId', fileController.downloadMedia);
+
 module.exports = router;

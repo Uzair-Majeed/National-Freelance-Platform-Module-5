@@ -9,19 +9,19 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const WorkspaceDashboard = () => {
-  const navigate    = useNavigate();
+  const navigate = useNavigate();
   const { workspaceId, workspaceName } = useWorkspace();
 
   const [isActionsOpen, setIsActionsOpen] = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const [members, setMembers]             = useState([]);
-  const [tasks, setTasks]                 = useState([]);
-  const [activities, setActivities]       = useState([]);
-  const [error, setError]                 = useState('');
-  const [permissions, setPermissions]     = useState({
+  const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [error, setError] = useState('');
+  const [permissions, setPermissions] = useState({
     viewActivity: false,
     inviteMember: false,
-    createTask:   false,
+    createTask: false,
   });
 
   useEffect(() => {
@@ -37,13 +37,13 @@ const WorkspaceDashboard = () => {
           roleApi.checkPermission(workspaceId, 'INVITE_MEMBER'),
           roleApi.checkPermission(workspaceId, 'CREATE_TASK'),
         ]);
-        if (memRes.success)  setMembers(memRes.data);
+        if (memRes.success) setMembers(memRes.data);
         if (taskRes.success) setTasks(taskRes.data);
-        if (actRes.success)  setActivities(actRes.data);
+        if (actRes.success) setActivities(actRes.data);
         setPermissions({
           viewActivity: p1.success ? p1.data.allowed : false,
           inviteMember: p2.success ? p2.data.allowed : false,
-          createTask:   p3.success ? p3.data.allowed : false,
+          createTask: p3.success ? p3.data.allowed : false,
         });
       } catch (err) {
         setError(err.message);
@@ -54,11 +54,11 @@ const WorkspaceDashboard = () => {
     fetchData();
   }, [workspaceId, navigate]);
 
-  const total      = tasks.length;
-  const done       = tasks.filter(t => t.status === 'DONE').length;
+  const total = tasks.length;
+  const done = tasks.filter(t => t.status === 'DONE').length;
   const inProgress = tasks.filter(t => t.status === 'IN_PROGRESS').length;
-  const overdue    = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'DONE').length;
-  const progress   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const overdue = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'DONE').length;
+  const progress = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -99,10 +99,10 @@ const WorkspaceDashboard = () => {
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 shrink-0">
         {[
-          { label: 'Total Tasks',  value: total,      bg: 'bg-white border-border', icon: <Kanban size={20} className="text-primary" /> },
-          { label: 'Completed',    value: done,       bg: 'bg-primary text-white border-black', icon: <CheckCircle2 size={20} /> },
-          { label: 'In Progress',  value: inProgress, bg: 'bg-white border-border', icon: <PlayCircle size={20} className="text-primary" /> },
-          { label: 'Overdue',      value: overdue,    bg: 'bg-white border-border', icon: <AlertCircle size={20} className="text-red-600" /> },
+          { label: 'Total Tasks', value: total, bg: 'bg-white border-border', icon: <Kanban size={20} className="text-primary" /> },
+          { label: 'Completed', value: done, bg: 'bg-primary text-white border-black', icon: <CheckCircle2 size={20} /> },
+          { label: 'In Progress', value: inProgress, bg: 'bg-white border-border', icon: <PlayCircle size={20} className="text-primary" /> },
+          { label: 'Overdue', value: overdue, bg: 'bg-white border-border', icon: <AlertCircle size={20} className="text-red-600" /> },
         ].map((s, i) => (
           <div key={i} className={`p-5 rounded-2xl border flex items-center gap-4 shadow-sm hover:shadow-md transition-all ${s.bg}`}>
             <div className={`w-10 h-10 rounded-xl ${s.bg.includes('bg-primary') ? 'bg-white/10' : 'bg-surface-alt'} flex items-center justify-center`}>{s.icon}</div>
@@ -195,17 +195,17 @@ const WorkspaceDashboard = () => {
       {/* Quick Links */}
       <div className="bg-white border border-border rounded-2xl p-6 shadow-sm shrink-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { path: '/tasks', label: 'TASK BOARD', icon: <Layout size={20} /> },
-              { path: '/team', label: 'TEAM NETWORK', icon: <Users size={20} /> },
-              { path: '/chat', label: 'DISCUSSION', icon: <MessageSquare size={20} /> },
-              { path: '/activity', label: 'AUDIT LOG', icon: <Clock size={20} /> }
-            ].map((link, idx) => (
-              <div key={idx} onClick={() => navigate(link.path)} className="bg-surface-alt p-4 rounded-xl border border-transparent hover:border-border hover:bg-white cursor-pointer transition-all hover:shadow-md group flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center group-hover:bg-black group-hover:text-white group-hover:border-black transition-all shadow-sm">{link.icon}</div>
-                <p className="text-xs font-black text-primary tracking-widest uppercase group-hover:translate-x-1 transition-transform">{link.label}</p>
-              </div>
-            ))}
+          {[
+            { path: '/tasks', label: 'TASK BOARD', icon: <Layout size={20} /> },
+            { path: '/team', label: 'TEAM NETWORK', icon: <Users size={20} /> },
+            { path: '/chat', label: 'DISCUSSION', icon: <MessageSquare size={20} /> },
+            { path: '/activity', label: 'AUDIT LOG', icon: <Clock size={20} /> }
+          ].map((link, idx) => (
+            <div key={idx} onClick={() => navigate(link.path)} className="bg-surface-alt p-4 rounded-xl border border-transparent hover:border-border hover:bg-white cursor-pointer transition-all hover:shadow-md group flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-white border border-border flex items-center justify-center group-hover:bg-black group-hover:text-white group-hover:border-black transition-all shadow-sm">{link.icon}</div>
+              <p className="text-xs font-black text-primary tracking-widest uppercase group-hover:translate-x-1 transition-transform">{link.label}</p>
+            </div>
+          ))}
         </div>
       </div>
       <QuickActionsModal isOpen={isActionsOpen} onClose={() => setIsActionsOpen(false)} />

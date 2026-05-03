@@ -156,7 +156,7 @@ const WorkspaceActivity = () => {
                 const rowClass = ROW_STYLES[act.action_type] || 'hover:bg-gray-50/80';
                 const label    = LABEL_STYLES[act.action_type] || { bg: 'bg-gray-600', icon: <Info size={12} /> };
                 return (
-                  <tr key={act.log_id} className={`transition-all group border-l-4 ${rowClass} border-l-transparent hover:border-l-primary`}>
+                  <tr key={act.id} className={`transition-all group border-l-4 ${rowClass} border-l-transparent hover:border-l-primary`}>
                     <td className="p-6 text-center font-black text-xs text-gray-400 group-hover:text-primary">#{index + 1}</td>
                     <td className="p-6">
                       <div className="flex items-center gap-3">
@@ -169,7 +169,7 @@ const WorkspaceActivity = () => {
                     <td className="p-6">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-primary uppercase tracking-tight group-hover:translate-x-1 transition-transform">{act.entity_type}</span>
-                        <span className="text-[10px] font-black text-gray-800 mt-1 uppercase tracking-widest bg-white/50 w-fit px-1.5 py-0.5 rounded border border-black/5">REF: {act.entity_id.slice(0, 12)}</span>
+                        <span className="text-[10px] font-black text-gray-800 mt-1 uppercase tracking-widest bg-white/50 w-fit px-1.5 py-0.5 rounded border border-black/5">REF: {act.entity_id}</span>
                       </div>
                     </td>
                     <td className="p-6">

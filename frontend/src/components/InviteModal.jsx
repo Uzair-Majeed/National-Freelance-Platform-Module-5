@@ -11,9 +11,9 @@ const InviteModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     const fetchWorkspace = async () => {
-      const wsData = await workspaceApi.getByProject('123e4567-e89b-12d3-a456-426614174000');
+      const wsData = await workspaceApi.getByProject(1);
       if (wsData.success && wsData.data.length > 0) {
-        setWorkspaceId(wsData.data[0].workspace_id);
+        setWorkspaceId(wsData.data[0].id);
       }
     };
     if (isOpen) fetchWorkspace();
