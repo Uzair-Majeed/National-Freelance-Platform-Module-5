@@ -44,7 +44,7 @@ const CreateTask = () => {
         const formData = new FormData();
         formData.append('file', attachedFile);
         formData.append('workspaceId', workspaceId);
-        formData.append('taskId', res.data.task_id);
+        formData.append('taskId', res.data.id);
         await fileApi.upload(formData);
       }
 

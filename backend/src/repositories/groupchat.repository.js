@@ -7,7 +7,7 @@ const pool = require('../config/db');
 
 const findRoomByWorkspace = async (workspaceId) => {
   const result = await pool.query(
-    'SELECT * FROM chat_rooms WHERE workspace_id = $1::uuid AND room_type = $2 AND deleted_at IS NULL',
+    'SELECT * FROM chat_rooms WHERE workspace_id = $1 AND room_type = $2 AND deleted_at IS NULL',
     [workspaceId, 'group']
   );
   return result.rows[0];
@@ -16,7 +16,7 @@ const findRoomByWorkspace = async (workspaceId) => {
 const createRoom = async ({ workspace_id, room_name, created_by }) => {
   const result = await pool.query(
     `INSERT INTO chat_rooms (workspace_id, room_name, room_type, created_by)
-     VALUES ($1::uuid, $2, $3, $4::uuid) RETURNING *`,
+     VALUES ($1, $2, $3, $4) RETURNING *`,
     [workspace_id, room_name, 'group', created_by]
   );
   return result.rows[0];
@@ -25,7 +25,7 @@ const createRoom = async ({ workspace_id, room_name, created_by }) => {
 const saveMessage = async ({ room_id, sender_id, content, message_type = 'text', media_id = null, reply_to_msg_id = null }) => {
   const result = await pool.query(
     `INSERT INTO chat_messages (room_id, sender_id, content, message_type, media_id, reply_to_msg_id)
-     VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6) RETURNING *`,
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
     [room_id, sender_id, content, message_type, media_id, reply_to_msg_id]
   );
   return result.rows[0];
@@ -36,14 +36,14 @@ const getMessagesByRoom = async (roomId, limit = 50, offset = 0) => {
     `SELECT 
         cm.*, 
         u.email as sender_name, 
-        f.file_name, f.file_path, f.mime_type,
+        f.file_name, f.storage_url as file_path, f.mime_type,
         parent.content as reply_content,
         parent_u.email as reply_sender_name
      FROM chat_messages cm
-     JOIN workspace_users u ON cm.sender_id = u.user_id
-     LEFT JOIN workspace_files f ON cm.media_id = f.file_id
+     JOIN users u ON cm.sender_id = u.id
+     LEFT JOIN chat_media_files f ON cm.media_id = f.id
      LEFT JOIN chat_messages parent ON cm.reply_to_msg_id = parent.id
-     LEFT JOIN workspace_users parent_u ON parent.sender_id = parent_u.user_id
+     LEFT JOIN users parent_u ON parent.sender_id = parent_u.id
      WHERE cm.room_id = $1 AND cm.is_deleted = false
      ORDER BY cm.sent_at ASC
      LIMIT $2 OFFSET $3`,

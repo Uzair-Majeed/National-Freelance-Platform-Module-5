@@ -58,6 +58,17 @@ const getInvitations = async (req, res) => {
   }
 };
 
+const getInvitationsByEmail = async (req, res) => {
+  try {
+    const email = req.user?.email;
+    if (!email) throw new Error('User email not found in session');
+    const invitations = await workspaceService.getInvitationsByEmail(email);
+    res.status(200).json({ success: true, data: invitations });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const getWorkspaceById = async (req, res) => {
   try {
     const workspace = await workspaceService.getWorkspaceById(req.params.workspaceId);
@@ -133,6 +144,7 @@ module.exports = {
   respondToInvitation,
   getInvitationById,
   getInvitations,
+  getInvitationsByEmail,
   getWorkspaceById,
   getWorkspacesByProject,
   addMember,

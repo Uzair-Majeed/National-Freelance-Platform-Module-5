@@ -14,10 +14,10 @@ const create = async ({ workspace_id, task_id, uploaded_by, file_name, file_path
   return result.rows[0];
 };
 
-const findById = async (fileId) => {
+const findById = async (id) => {
   const result = await pool.query(
-    'SELECT * FROM workspace_files WHERE file_id = $1 AND deleted_at IS NULL',
-    [fileId]
+    'SELECT * FROM workspace_files WHERE id = $1 AND deleted_at IS NULL',
+    [id]
   );
   return result.rows[0] || null;
 };
@@ -38,10 +38,10 @@ const findByTask = async (taskId) => {
   return result.rows;
 };
 
-const softDelete = async (fileId) => {
+const softDelete = async (id) => {
   await pool.query(
-    'UPDATE workspace_files SET deleted_at = CURRENT_TIMESTAMP WHERE file_id = $1',
-    [fileId]
+    'UPDATE workspace_files SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1',
+    [id]
   );
 };
 

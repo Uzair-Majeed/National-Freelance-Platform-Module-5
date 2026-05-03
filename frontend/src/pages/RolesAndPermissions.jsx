@@ -195,11 +195,11 @@ const RolesAndPermissions = () => {
                     <td className="p-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center text-xs font-black text-primary shadow-sm shrink-0 group-hover:border-primary group-hover:shadow-md transition-all">
-                          {(member.user_id || 'U').substring(0, 2).toUpperCase()}
+                          {String(member.user_id || 'U').substring(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <p className="text-sm font-black text-primary uppercase tracking-tight group-hover:translate-x-1 transition-transform">{member.email || 'Unknown Entity'}</p>
-                          <p className="text-xs text-gray-800 font-black uppercase tracking-widest mt-1">UID: {member.user_id.slice(0, 12)}</p>
+                          <p className="text-xs text-gray-800 font-black uppercase tracking-widest mt-1">UID: {member.user_id}</p>
                         </div>
                       </div>
                     </td>

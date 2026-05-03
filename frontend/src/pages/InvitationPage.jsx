@@ -98,22 +98,22 @@ const InvitationPage = () => {
     );
   }
 
-  // ── Already responded ───────────────────────────────────────────────────────
-  if (invitation?.status !== 'PENDING') {
+  // ── Already responded or Null ───────────────────────────────────────────────
+  if (invitation && invitation.status.toUpperCase() !== 'PENDING') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#1E1E1E]/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-surface rounded-2xl shadow-2xl border border-border max-w-md w-full p-8 flex flex-col items-center text-center gap-6 animate-slide-up">
-          <div className="w-16 h-16 bg-gray-50 border rounded-2xl flex items-center justify-center text-gray-400 shadow-inner">
-            <Mail size={32} />
+      <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+        <div className="bg-white border-[8px] border-black max-w-md w-full p-12 flex flex-col items-center text-center gap-8 shadow-2xl">
+          <div className="w-20 h-20 bg-black text-white flex items-center justify-center">
+            <Mail size={40} />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-primary">Already Responded</h3>
-            <p className="text-sm text-gray-500 mt-2">
-              This invitation has already been <strong>{invitation.status.toLowerCase()}</strong>.
+            <h3 className="text-3xl font-black text-black uppercase tracking-tighter">Transmission Complete</h3>
+            <p className="text-sm font-black text-black/40 mt-4 uppercase tracking-[0.2em]">
+              This invitation has already been <span className="text-black">{invitation.status}</span>.
             </p>
           </div>
-          <button onClick={() => navigate('/')} className="px-6 py-2.5 bg-primary text-white rounded-lg text-xs font-extrabold tracking-wider uppercase shadow-sm hover:bg-opacity-90 transition-all">
-            Go Home
+          <button onClick={() => navigate('/')} className="w-full py-4 bg-black text-white text-[10px] font-black uppercase tracking-[0.4em] hover:invert transition-all">
+            Return to Dashboard
           </button>
         </div>
       </div>
@@ -121,55 +121,52 @@ const InvitationPage = () => {
   }
 
   // ── Active invitation ───────────────────────────────────────────────────────
-  return (
-    <div className="fixed inset-0 z-50 bg-[#1E1E1E]/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl border border-border max-w-md w-full p-8 flex flex-col items-center text-center gap-6 animate-slide-up">
+  if (!invitation) return null;
 
-        <div className="w-16 h-16 bg-primary/5 border rounded-2xl flex items-center justify-center text-primary shadow-inner">
-          <Mail size={32} />
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
+      <div className="bg-white border-[8px] border-black max-w-md w-full p-12 flex flex-col items-center text-center gap-8 shadow-2xl">
+
+        <div className="w-20 h-20 bg-black text-white flex items-center justify-center">
+          <Mail size={40} />
         </div>
 
         <div>
-          <h3 className="text-xl font-bold text-primary leading-snug">Workspace Invitation</h3>
-          <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-            You have been invited to join a workspace by{' '}
-            <span className="font-bold text-primary">User {invitation.invited_by.slice(0, 8)}</span>.
+          <h3 className="text-4xl font-black text-black uppercase tracking-tighter leading-tight">Incoming Linkage</h3>
+          <p className="text-sm font-black text-black/40 mt-6 uppercase tracking-[0.2em] leading-relaxed">
+            Entity <span className="text-black font-black">{invitation.inviter_email || 'ADMIN'}</span> requests your presence in workspace:
           </p>
-          <p className="text-xs text-gray-400 mt-1 font-medium">
-            Invite sent to: <span className="font-semibold text-primary">{invitation.invitee_email}</span>
-          </p>
+          <div className="mt-8 p-6 bg-black/5 border-4 border-black border-dashed">
+            <p className="text-2xl font-black text-black uppercase tracking-tighter">{invitation.workspace_name || 'Strategic Hub'}</p>
+          </div>
         </div>
 
-        <div className="w-full bg-gray-50 border border-border rounded-xl p-4 flex flex-col gap-2 text-xs text-left font-medium text-gray-600">
-          <p className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
-            Access to all collaborative kanban boards.
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
-            Default role: <strong className="ml-1 text-primary">MEMBER</strong>
-          </p>
-          <p className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-primary rounded-full"></span>
-            Admins can promote your role at any time.
-          </p>
+        <div className="w-full flex flex-col gap-3 text-left">
+          <div className="flex items-center gap-4">
+             <div className="w-2 h-2 bg-black"></div>
+             <p className="text-[10px] font-black text-black uppercase tracking-widest">Full Command Privileges</p>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="w-2 h-2 bg-black"></div>
+             <p className="text-[10px] font-black text-black uppercase tracking-widest">Secure Data Access</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full pt-2">
+        <div className="flex items-center gap-4 w-full mt-4">
           <button
             onClick={() => handleRespond('DECLINED')}
             disabled={responding}
-            className="flex-1 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-primary rounded-lg text-xs font-extrabold tracking-wider uppercase shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="flex-1 py-5 bg-white border-4 border-black text-black text-[10px] font-black uppercase tracking-[0.3em] hover:bg-black hover:text-white transition-all disabled:opacity-50"
           >
-            <X size={14} /> Decline
+            Abort
           </button>
           <button
             onClick={() => handleRespond('ACCEPTED')}
             disabled={responding}
-            className="flex-1 py-2.5 bg-primary text-white hover:bg-opacity-90 rounded-lg text-xs font-extrabold tracking-wider uppercase shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="flex-1 py-5 bg-black text-white text-[10px] font-black uppercase tracking-[0.4em] hover:invert transition-all flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            {responding ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Accept &amp; Join
+            {responding ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+            Join Workspace
           </button>
         </div>
 

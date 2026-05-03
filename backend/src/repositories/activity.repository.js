@@ -18,7 +18,7 @@ const findByWorkspace = async (workspaceId, limit = 50, offset = 0) => {
   const result = await pool.query(
     `SELECT al.*, u.email as actor_email 
      FROM workspace_activity_logs al
-     JOIN workspace_users u ON al.actor_user_id = u.user_id
+     JOIN users u ON al.actor_user_id = u.id
      WHERE al.workspace_id = $1 
      ORDER BY al.created_at DESC LIMIT $2 OFFSET $3`,
     [workspaceId, limit, offset]
@@ -30,7 +30,7 @@ const findByEntity = async (entityType, entityId) => {
   const result = await pool.query(
     `SELECT al.*, u.email as actor_email 
      FROM workspace_activity_logs al
-     JOIN workspace_users u ON al.actor_user_id = u.user_id
+     JOIN users u ON al.actor_user_id = u.id
      WHERE al.entity_type = $1 AND al.entity_id = $2 
      ORDER BY al.created_at DESC`,
     [entityType, entityId]

@@ -10,8 +10,22 @@ const activityService = require('./activity.service');
 const createTask = async (taskData, createdBy) => {
   const { workspaceId, title, description, priority, deadline, parentTaskId, assignedTo } = taskData;
   if (!workspaceId || !title) throw new Error('workspaceId and title are required');
-  const task = await taskRepository.create({ workspace_id: workspaceId, title, description, priority, deadline, parent_task_id: parentTaskId, assigned_to: assignedTo, created_by: createdBy });
-  await activityService.logActivity(createdBy, workspaceId, 'CREATED', 'TASK', task.task_id, null, task);
+  
+  // Normalize priority to lowercase for Centralized DB constraints
+  const normalizedPriority = priority ? priority.toLowerCase() : 'medium';
+  
+  const task = await taskRepository.create({ 
+    workspace_id: workspaceId, 
+    title, 
+    description, 
+    priority: normalizedPriority, 
+    deadline, 
+    parent_task_id: parentTaskId, 
+    assigned_to: assignedTo, 
+    created_by: createdBy 
+  });
+  
+  await activityService.logActivity(createdBy, workspaceId, 'CREATED', 'TASK', task.id, null, task);
   return task;
 };
 
@@ -23,12 +37,17 @@ const assignTask = async (taskId, userId, requesterId) => {
 };
 
 const updateTaskStatus = async (taskId, status, requesterId) => {
-  // Relaxed enum constraint since DB uses VARCHAR now, but we can keep app-level validation
-  const validStatuses = ['TODO', 'IN_PROGRESS', 'UNDER_REVIEW', 'DONE', 'BLOCKED'];
-  if (!validStatuses.includes(status)) throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  // Normalize to lowercase for Centralized DB constraints
+  const normalizedStatus = status ? status.toLowerCase() : 'todo';
+  const validStatuses = ['todo', 'in_progress', 'under_review', 'done'];
+  
+  if (!validStatuses.includes(normalizedStatus)) {
+    throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  }
+  
   const oldTask = await taskRepository.findById(taskId);
-  const task = await taskRepository.update(taskId, { status });
-  await activityService.logActivity(requesterId, task.workspace_id, 'UPDATED', 'TASK', taskId, { status: oldTask.status }, { status });
+  const task = await taskRepository.update(taskId, { status: normalizedStatus });
+  await activityService.logActivity(requesterId, task.workspace_id, 'UPDATED', 'TASK', taskId, { status: oldTask.status }, { status: normalizedStatus });
   return task;
 };
 
@@ -49,6 +68,10 @@ const updateTask = async (taskId, updates, requesterId) => {
   }
 
   if (Object.keys(taskUpdates).length > 0) {
+    // Normalize fields if present
+    if (taskUpdates.priority) taskUpdates.priority = taskUpdates.priority.toLowerCase();
+    if (taskUpdates.status) taskUpdates.status = taskUpdates.status.toLowerCase();
+
     const task = await taskRepository.update(taskId, taskUpdates);
     await activityService.logActivity(requesterId, task.workspace_id, 'UPDATED', 'TASK', taskId, oldTask, task);
     return task;

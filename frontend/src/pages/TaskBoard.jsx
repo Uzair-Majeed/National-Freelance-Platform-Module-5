@@ -102,7 +102,7 @@ const TaskBoard = () => {
       {/* Kanban Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 min-h-0 overflow-visible lg:overflow-hidden items-stretch">
         {COLUMNS.map((col) => {
-          const colTasks = tasks.filter(t => t.status === col.status);
+          const colTasks = tasks.filter(t => t.status?.toUpperCase() === col.status);
           return (
             <div key={col.status} className="flex flex-col bg-surface-alt/50 border border-border rounded-2xl p-4 shadow-sm min-h-[400px] lg:min-h-0">
               <div className="flex justify-between items-center mb-6 px-1 shrink-0">
@@ -116,8 +116,8 @@ const TaskBoard = () => {
               <div className="flex flex-col gap-4 overflow-y-auto flex-1 pr-1 custom-scrollbar">
                 {colTasks.map((task) => (
                   <Link
-                    to={`/tasks/${task.task_id}`}
-                    key={task.task_id}
+                    to={`/tasks/${task.id}`}
+                    key={task.id}
                     className={`p-5 rounded-2xl border shadow-sm transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[170px] group border-l-8 ${PRIORITY_CARD_STYLES[task.priority] || 'bg-white border-border'}`}
                   >
                     <div>

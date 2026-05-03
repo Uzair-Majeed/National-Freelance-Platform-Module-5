@@ -58,7 +58,7 @@ const seedDefaultRoles = async (workspaceId) => {
   const roleMap = {};
   for (const roleDef of DEFAULT_ROLES) {
     const role = await roleRepository.create({ workspace_id: workspaceId, ...roleDef });
-    roleMap[roleDef.role_name] = role.role_id;
+    roleMap[roleDef.role_name] = role.id;
   }
   return roleMap;
 };
@@ -70,7 +70,7 @@ const getMemberRoleId = async (workspaceId) => {
   const roles = await roleRepository.findByWorkspace(workspaceId);
   const memberRole = roles.find((r) => r.role_name === 'MEMBER');
   if (!memberRole) throw new Error('Default MEMBER role not found for this workspace');
-  return memberRole.role_id;
+  return memberRole.id;
 };
 
 // ─── Service methods ──────────────────────────────────────────────────────────
@@ -84,13 +84,13 @@ const createWorkspace = async (name, projectId, createdBy) => {
   const workspace = await workspaceRepository.create({ name, project_id: projectId, created_by: createdBy });
 
   // 2. Seed default roles (ADMIN, MANAGER, MEMBER)
-  const roleMap = await seedDefaultRoles(workspace.workspace_id);
+  const roleMap = await seedDefaultRoles(workspace.id);
 
   // 3. Auto-add the creator as ADMIN
-  await workspaceRepository.addMember(workspace.workspace_id, createdBy, roleMap['ADMIN']);
+  await workspaceRepository.addMember(workspace.id, createdBy, roleMap['ADMIN']);
 
   // 4. Log the activity
-  await activityService.logActivity(createdBy, workspace.workspace_id, 'CREATED', 'WORKSPACE', workspace.workspace_id, null, { name });
+  await activityService.logActivity(createdBy, workspace.id, 'CREATED', 'WORKSPACE', workspace.id, null, { name });
 
   return workspace;
 };
@@ -104,34 +104,34 @@ const inviteUser = async (workspaceId, invitedBy, inviteeEmail) => {
 
   // Construct the link to the frontend
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const inviteLink = `${frontendUrl}/invite?invitationId=${invitation.invitation_id}`;
+  const inviteLink = `${frontendUrl}/invite?invitationId=${invitation.id}`;
 
   // Send the email asynchronously
   try {
-    const shortName = invitedBy ? String(invitedBy).slice(0, 8) : 'Someone'; // Shorten UUID for display
+    const shortName = invitedBy ? String(invitedBy) : 'Someone'; 
     await emailService.sendWorkspaceInvitation(inviteeEmail, shortName, workspaceName, inviteLink);
   } catch (err) {
     console.error('[inviteUser] Non-fatal: Failed to send email.', err.message);
   }
 
-  await activityService.logActivity(invitedBy, workspaceId, 'CREATED', 'WORKSPACE_INVITATION', invitation.invitation_id, null, { inviteeEmail });
+  await activityService.logActivity(invitedBy, workspaceId, 'CREATED', 'WORKSPACE_INVITATION', invitation.id, null, { inviteeEmail });
   return invitation;
 };
 
 const respondToInvitation = async (invitationId, status, inviteeUserId) => {
   const invitation = await workspaceRepository.findInvitation(invitationId);
   if (!invitation) throw new Error(`Invitation ${invitationId} not found`);
-  if (invitation.status !== 'PENDING') throw new Error('Invitation has already been responded to');
+  if (invitation.status.toUpperCase() !== 'PENDING') throw new Error('Invitation has already been responded to');
 
-  const normalised = status.toUpperCase();
-  if (!['ACCEPTED', 'DECLINED'].includes(normalised)) {
+  const normalised = status.toLowerCase();
+  if (!['accepted', 'declined'].includes(normalised)) {
     throw new Error('status must be ACCEPTED or DECLINED');
   }
 
   const updated = await workspaceRepository.updateInvitationStatus(invitationId, normalised, inviteeUserId);
 
   // If accepted, add the invitee as a MEMBER of the workspace
-  if (normalised === 'ACCEPTED') {
+  if (normalised === 'accepted') {
     const memberRoleId = await getMemberRoleId(invitation.workspace_id);
     await workspaceRepository.addMember(invitation.workspace_id, inviteeUserId, memberRoleId);
     await activityService.logActivity(inviteeUserId, invitation.workspace_id, 'UPDATED', 'WORKSPACE_MEMBER', inviteeUserId, null, { role: 'MEMBER' });
@@ -148,6 +148,10 @@ const getInvitationById = async (invitationId) => {
 
 const getInvitations = async (workspaceId) => {
   return workspaceRepository.findInvitationsByWorkspace(workspaceId);
+};
+
+const getInvitationsByEmail = async (email) => {
+  return workspaceRepository.findInvitationsByEmail(email);
 };
 
 const addMember = async (workspaceId, userId, roleId, requesterId) => {
@@ -196,6 +200,7 @@ module.exports = {
   addMember,
   removeMember,
   getMembers,
+  getInvitationsByEmail,
   getWorkspaceById,
   getWorkspacesByProject,
   deleteWorkspace,

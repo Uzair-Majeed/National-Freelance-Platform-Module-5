@@ -8,6 +8,9 @@ router.get('/invitation/:invitationId', ctrl.getInvitationById);
 // PATCH /api/workspaces/invitation/:invitationId/respond – accept or decline
 router.patch('/invitation/:invitationId/respond', ctrl.respondToInvitation);
 
+// GET /api/workspaces/invitations/my – fetch invitations for the logged in email
+router.get('/invitations/my', ctrl.getInvitationsByEmail);
+
 // ── Project-scoped workspace list (must come before /:workspaceId) ────────────
 // GET  /api/workspaces/project/:projectId
 router.get('/project/:projectId', ctrl.getWorkspacesByProject);

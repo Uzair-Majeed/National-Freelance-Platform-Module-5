@@ -105,7 +105,7 @@ const FileManagement = () => {
               </thead>
               <tbody>
                 {files.map((file) => (
-                  <tr key={file.file_id} className="border-b border-border hover:bg-gray-50/30 transition-colors">
+                  <tr key={file.id} className="border-b border-border hover:bg-gray-50/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded bg-primary/5 flex items-center justify-center text-primary">
@@ -126,7 +126,7 @@ const FileManagement = () => {
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-2">
                         <a 
-                          href={fileApi.getDownloadUrl(file.file_id)} 
+                          href={fileApi.getDownloadUrl(file.id)} 
                           target="_blank" 
                           rel="noreferrer"
                           className="p-2 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
